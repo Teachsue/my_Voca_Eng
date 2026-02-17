@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart';
@@ -15,8 +16,16 @@ import 'wrong_answer_page.dart';
 import 'todays_word_list_page.dart'; // ★ 단어 리스트 페이지 import 필수
 
 void main() async {
+  // 1. 플러터 엔진 초기화
   WidgetsFlutterBinding.ensureInitialized();
 
+  // 2. ★ 세로 모드 방향 고정 (상/하 방향 세로만 허용)
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
+
+  // 3. Hive 및 서비스 초기화
   await Hive.initFlutter();
   Hive.registerAdapter(WordAdapter());
 
@@ -28,6 +37,7 @@ void main() async {
   await initializeDateFormatting();
   await DataLoader.loadData();
 
+  // 4. 앱 실행
   runApp(const MyApp());
 }
 
