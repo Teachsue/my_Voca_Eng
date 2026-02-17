@@ -34,11 +34,10 @@ class _TodaysQuizPageState extends State<TodaysQuizPage> {
   }
 
   void _initialize() async {
-    // 1. 퀴즈 데이터 생성
+    // 1. 퀴즈 데이터 생성 (이 안에서 랜덤으로 섞이게 수정할 것입니다)
     _generateQuiz();
 
-    // 2. 고유 키 생성 (날짜 + 카테고리 + 레벨)
-    // 단어 리스트의 첫 번째 단어 정보를 기반으로 키를 만듭니다.
+    // 2. 고유 키 생성
     if (widget.words.isNotEmpty) {
       String dateStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
       Word firstWord = widget.words.first;
@@ -48,7 +47,7 @@ class _TodaysQuizPageState extends State<TodaysQuizPage> {
       _cacheKey = "quiz_progress_temp";
     }
 
-    // 3. 저장된 진행 상황 불러오기 (이어풀기)
+    // 3. 저장된 진행 상황 불러오기
     _loadProgress();
   }
 
@@ -105,7 +104,12 @@ class _TodaysQuizPageState extends State<TodaysQuizPage> {
         .where((w) => w.type == 'Word')
         .toList();
 
-    for (var targetWord in widget.words) {
+    // ★ [수정] 원본 리스트를 복사해서 무작위로 섞습니다.
+    List<Word> shuffledWords = List<Word>.from(widget.words);
+    shuffledWords.shuffle();
+
+    // 이제 widget.words 대신 순서가 섞인 shuffledWords를 사용합니다.
+    for (var targetWord in shuffledWords) {
       String correctAnswer = targetWord.meaning;
 
       List<String> distractors = allWordCandidates

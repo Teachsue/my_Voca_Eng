@@ -178,10 +178,6 @@ class _StudyPageState extends State<StudyPage> {
                                 ],
                               ),
                             ),
-                            Icon(
-                              Icons.volume_up_rounded,
-                              color: Colors.grey[300],
-                            ),
                           ],
                         ),
                       );
