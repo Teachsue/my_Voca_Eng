@@ -49,7 +49,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.indigo,
         fontFamily: 'Pretendard',
-        scaffoldBackgroundColor: const Color(0xFFF8FAFC), // 배경을 살짝 더 화사하게 변경
+        scaffoldBackgroundColor: const Color(0xFFF8FAFC),
         useMaterial3: true,
       ),
       home: const HomePage(),
@@ -84,7 +84,6 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
-          // 화면이 작을 때를 대비해 스크롤 추가
           child: Padding(
             padding: const EdgeInsets.symmetric(
               horizontal: 24.0,
@@ -150,10 +149,10 @@ class _HomePageState extends State<HomePage> {
                 ),
                 const SizedBox(height: 35),
 
-                // [2] 데일리 학습 대시보드 (자연스럽게 묶인 두 개의 배너)
+                // [2] 데일리 학습 대시보드
                 Column(
                   children: [
-                    // 오늘의 단어 배너 (메인)
+                    // 오늘의 단어 배너
                     GestureDetector(
                       onTap: () async {
                         await _startTodaysQuiz();
@@ -231,10 +230,32 @@ class _HomePageState extends State<HomePage> {
                       ),
                     ),
 
-                    const SizedBox(height: 16), // 메인 배너와 서브 배너 사이의 간격을 좁힘
-                    // 실력 진단 배너 (서브 - 부드러운 UI 적용)
+                    const SizedBox(height: 16),
+
+                    // ★ 실력 진단 배너 (하루 1회 제한 로직 추가)
                     GestureDetector(
                       onTap: () async {
+                        // 저장된 마지막 완료 날짜를 가져옵니다.
+                        final String lastCompletedDate = cacheBox.get(
+                          'level_test_completed_date',
+                          defaultValue: '',
+                        );
+
+                        // 오늘 이미 응시했다면 팝업 띄우고 차단
+                        if (todayStr == lastCompletedDate) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                "레벨 테스트는 하루에 한 번만 참여할 수 있어요! 내일 다시 도전해 보세요. ⏳",
+                              ),
+                              duration: Duration(seconds: 2),
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                          return;
+                        }
+
+                        // 아니면 레벨 테스트 입장
                         await Navigator.push(
                           context,
                           MaterialPageRoute(
@@ -266,9 +287,7 @@ class _HomePageState extends State<HomePage> {
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
                                 color: Colors.indigo.withOpacity(0.06),
-                                borderRadius: BorderRadius.circular(
-                                  14,
-                                ), // 부드러운 사각형
+                                borderRadius: BorderRadius.circular(14),
                               ),
                               child: const Icon(
                                 Icons.psychology_alt_rounded,
@@ -333,14 +352,13 @@ class _HomePageState extends State<HomePage> {
                 ),
                 const SizedBox(height: 16),
 
-                // GridView를 ScrollView 안에 넣기 위한 래퍼
                 GridView.count(
-                  shrinkWrap: true, // 부모의 스크롤을 따름
-                  physics: const NeverScrollableScrollPhysics(), // 자체 스크롤 비활성화
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
                   crossAxisCount: 2,
                   crossAxisSpacing: 16,
                   mainAxisSpacing: 16,
-                  childAspectRatio: 1.05, // 카드 비율 살짝 조정
+                  childAspectRatio: 1.05,
                   children: [
                     _buildMenuCard(
                       title: "TOEIC",
@@ -354,7 +372,7 @@ class _HomePageState extends State<HomePage> {
                     ),
                     _buildMenuCard(
                       title: "OPIc",
-                      subtitle: "오픽 단어 연습",
+                      subtitle: "말하기 연습",
                       icon: Icons.record_voice_over_rounded,
                       color: Colors.orangeAccent,
                       onTap: () async {

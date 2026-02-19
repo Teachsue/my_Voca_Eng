@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:intl/intl.dart'; // ★ 추가: 날짜 저장을 위한 패키지
 import 'word_model.dart';
 
 class LevelTestPage extends StatefulWidget {
@@ -15,14 +16,12 @@ class _LevelTestPageState extends State<LevelTestPage> {
   int _currentIndex = 0;
   int _score = 0;
 
-  // 각 레벨별 정답 개수 체크용
   Map<String, int> _levelScores = {'500': 0, '700': 0, '900+': 0};
 
   bool _isChecked = false;
   String? _userSelectedAnswer;
   bool _isCorrect = false;
 
-  // 레벨 테스트 전용 캐시 키
   final String _cacheKey = "level_test_progress";
 
   @override
@@ -33,15 +32,12 @@ class _LevelTestPageState extends State<LevelTestPage> {
     });
   }
 
-  // 1. 진입 시 진행 기록 확인
   void _checkProgressAndInitialize() {
     final cacheBox = Hive.box('cache');
     final savedData = cacheBox.get(_cacheKey);
 
     if (savedData != null) {
       int savedIndex = savedData['index'] ?? 0;
-
-      // ★ 한 문제라도 푼 기록이 있을 때(index > 0)만 팝업 노출
       if (savedIndex > 0) {
         _showResumeDialog(savedData);
       } else {
@@ -53,7 +49,6 @@ class _LevelTestPageState extends State<LevelTestPage> {
     }
   }
 
-  // 2. 이어풀기 알림창
   void _showResumeDialog(dynamic savedData) {
     showDialog(
       context: context,
@@ -70,14 +65,14 @@ class _LevelTestPageState extends State<LevelTestPage> {
             onPressed: () {
               _clearProgress();
               Navigator.pop(context);
-              _generateLevelTestData(); // 새로 풀기
+              _generateLevelTestData();
             },
             child: const Text("새로 풀기", style: TextStyle(color: Colors.grey)),
           ),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
-              _restoreFromCache(savedData); // 이어풀기
+              _restoreFromCache(savedData);
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.indigo),
             child: const Text("이어서 풀기", style: TextStyle(color: Colors.white)),
@@ -87,13 +82,11 @@ class _LevelTestPageState extends State<LevelTestPage> {
     );
   }
 
-  // 3. 캐시 데이터 복구
   void _restoreFromCache(dynamic savedData) {
     setState(() {
       _currentIndex = savedData['index'] ?? 0;
       _score = savedData['score'] ?? 0;
 
-      // Map 데이터 안전하게 복원
       final Map<dynamic, dynamic> rawScores =
           savedData['levelScores'] ?? {'500': 0, '700': 0, '900+': 0};
       _levelScores = rawScores.map((k, v) => MapEntry(k.toString(), v as int));
@@ -104,7 +97,6 @@ class _LevelTestPageState extends State<LevelTestPage> {
     });
   }
 
-  // 4. 레벨 테스트용 데이터 생성
   void _generateLevelTestData() {
     final box = Hive.box<Word>('words');
     final allWords = box.values.where((w) => w.type == 'Word').toList();
@@ -115,7 +107,6 @@ class _LevelTestPageState extends State<LevelTestPage> {
     for (var level in levels) {
       final levelWords = allWords.where((w) => w.level == level).toList();
       levelWords.shuffle();
-      // 각 레벨당 5문제씩, 총 15문제
       testPool.addAll(levelWords.take(5));
     }
 
@@ -146,11 +137,10 @@ class _LevelTestPageState extends State<LevelTestPage> {
       });
     }
 
-    _saveProgress(); // 데이터 생성 직후 저장
+    _saveProgress();
     setState(() {});
   }
 
-  // 5. 정답 체크 및 레벨별 점수 기록
   void _checkAnswer(String selectedAnswer) {
     if (_isChecked) return;
 
@@ -169,10 +159,9 @@ class _LevelTestPageState extends State<LevelTestPage> {
       _isCorrect = correct;
     });
 
-    _saveProgress(); // 체크 후 진행상황 저장
+    _saveProgress();
   }
 
-  // 6. 다음 문제 또는 결과 화면 이동
   void _nextQuestion() {
     if (_currentIndex < _testData.length - 1) {
       setState(() {
@@ -180,14 +169,13 @@ class _LevelTestPageState extends State<LevelTestPage> {
         _isChecked = false;
         _userSelectedAnswer = null;
       });
-      _saveProgress(); // 다음 문제로 넘어가면 상태 저장
+      _saveProgress();
     } else {
-      _clearProgress(); // 테스트를 끝까지 완료했으므로 캐시 삭제
+      _clearProgress();
       _showResultDialog();
     }
   }
 
-  // 진행 상태 저장 로직
   void _saveProgress() {
     final cacheBox = Hive.box('cache');
     cacheBox.put(_cacheKey, {
@@ -198,12 +186,10 @@ class _LevelTestPageState extends State<LevelTestPage> {
     });
   }
 
-  // 진행 상태 삭제 로직
   void _clearProgress() {
     Hive.box('cache').delete(_cacheKey);
   }
 
-  // 7. 레벨 테스트 결과 분석 및 팝업
   void _showResultDialog() {
     String recommendedLevel = '500';
     if (_levelScores['900+']! >= 3) {
@@ -212,8 +198,10 @@ class _LevelTestPageState extends State<LevelTestPage> {
       recommendedLevel = '700';
     }
 
-    // 결과 저장 (main.dart 홈 화면 갱신용)
+    // ★ 추가: 테스트 완료 날짜와 추천 레벨을 함께 저장합니다.
+    final String todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
     Hive.box('cache').put('user_recommended_level', recommendedLevel);
+    Hive.box('cache').put('level_test_completed_date', todayStr);
 
     showDialog(
       context: context,
@@ -250,8 +238,8 @@ class _LevelTestPageState extends State<LevelTestPage> {
           Center(
             child: ElevatedButton(
               onPressed: () {
-                Navigator.pop(context); // 다이얼로그 닫기
-                Navigator.pop(context); // 홈으로 이동
+                Navigator.pop(context);
+                Navigator.pop(context);
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.indigo,
@@ -295,11 +283,10 @@ class _LevelTestPageState extends State<LevelTestPage> {
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 0,
-        // ★ 뒤로가기 버튼 활성화 및 저장 로직 추가
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded),
           onPressed: () {
-            _saveProgress(); // 나가기 전에 무조건 한 번 저장
+            _saveProgress();
             Navigator.pop(context);
           },
         ),
@@ -386,7 +373,7 @@ class _LevelTestPageState extends State<LevelTestPage> {
                 padding: const EdgeInsets.only(bottom: 15),
                 child: Container(
                   width: double.infinity,
-                  height: 85, // 박스 높이 고정
+                  height: 85,
                   child: OutlinedButton(
                     onPressed: () => _checkAnswer(option),
                     style: OutlinedButton.styleFrom(
@@ -406,7 +393,7 @@ class _LevelTestPageState extends State<LevelTestPage> {
                           : option,
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        fontSize: 17, // 글자 크기 고정
+                        fontSize: 17,
                         fontWeight: isCorrectOption && _isChecked
                             ? FontWeight.bold
                             : FontWeight.normal,
