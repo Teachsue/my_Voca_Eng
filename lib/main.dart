@@ -12,11 +12,11 @@ import 'calendar_page.dart';
 import 'study_record_service.dart';
 import 'wrong_answer_page.dart';
 import 'todays_word_list_page.dart';
+import 'level_test_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 세로 모드 고정
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
@@ -49,7 +49,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.indigo,
         fontFamily: 'Pretendard',
-        scaffoldBackgroundColor: const Color(0xFFF5F9FF),
+        scaffoldBackgroundColor: const Color(0xFFF8FAFC), // 배경을 살짝 더 화사하게 변경
         useMaterial3: true,
       ),
       home: const HomePage(),
@@ -73,156 +73,279 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     final cacheBox = Hive.box('cache');
     final String todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
+
     bool isCompleted = cacheBox.get(
       "today_completed_$todayStr",
       defaultValue: false,
     );
 
+    String? recommendedLevel = cacheBox.get('user_recommended_level');
+
     return Scaffold(
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        "안녕하세요! 👋",
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: Colors.grey[600],
-                          fontWeight: FontWeight.w500,
+        child: SingleChildScrollView(
+          // 화면이 작을 때를 대비해 스크롤 추가
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 24.0,
+              vertical: 20.0,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // [1] 상단 헤더
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "안녕하세요! 👋",
+                          style: TextStyle(
+                            fontSize: 15,
+                            color: Colors.grey[600],
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 5),
-                      const Text(
-                        "오늘도 열공해볼까요?",
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
-                        ),
-                      ),
-                    ],
-                  ),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.grey.withOpacity(0.1),
-                          blurRadius: 10,
-                          spreadRadius: 2,
+                        const SizedBox(height: 6),
+                        const Text(
+                          "오늘도 열공해볼까요?",
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87,
+                            letterSpacing: -0.5,
+                          ),
                         ),
                       ],
                     ),
-                    child: IconButton(
-                      icon: const Icon(
-                        Icons.calendar_month,
-                        color: Colors.indigo,
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.grey.withOpacity(0.15),
+                            blurRadius: 15,
+                            spreadRadius: 2,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
                       ),
-                      onPressed: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const CalendarPage(),
+                      child: IconButton(
+                        icon: const Icon(
+                          Icons.calendar_month_rounded,
+                          color: Colors.indigo,
+                        ),
+                        onPressed: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const CalendarPage(),
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 30),
-              GestureDetector(
-                onTap: () async {
-                  await _startTodaysQuiz();
-                  _refresh();
-                },
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: isCompleted
-                          ? [Colors.grey.shade400, Colors.grey.shade600]
-                          : [const Color(0xFF5B86E5), const Color(0xFF36D1DC)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(24),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                  ],
+                ),
+                const SizedBox(height: 35),
+
+                // [2] 데일리 학습 대시보드 (자연스럽게 묶인 두 개의 배너)
+                Column(
+                  children: [
+                    // 오늘의 단어 배너 (메인)
+                    GestureDetector(
+                      onTap: () async {
+                        await _startTodaysQuiz();
+                        _refresh();
+                      },
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(24),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: isCompleted
+                                ? [Colors.grey.shade400, Colors.grey.shade500]
+                                : [
+                                    const Color(0xFF5B86E5),
+                                    const Color(0xFF36D1DC),
+                                  ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(24),
+                          boxShadow: [
+                            BoxShadow(
+                              color: isCompleted
+                                  ? Colors.grey.withOpacity(0.3)
+                                  : const Color(0xFF5B86E5).withOpacity(0.35),
+                              blurRadius: 15,
+                              offset: const Offset(0, 8),
+                            ),
+                          ],
+                        ),
+                        child: Row(
                           children: [
-                            Text(
-                              isCompleted ? "오늘의 학습 완료! ✅" : "오늘의 영단어 🔥",
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    isCompleted ? "오늘의 학습 완료! ✅" : "오늘의 영단어 🔥",
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Text(
+                                    isCompleted
+                                        ? "훌륭합니다! 내일 다시 만나요.\n복습은 언제나 환영이에요."
+                                        : "매일 10개씩 꾸준히!\n지금 바로 시작하세요.",
+                                    style: TextStyle(
+                                      color: Colors.white.withOpacity(0.9),
+                                      fontSize: 14,
+                                      height: 1.5,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                            const SizedBox(height: 8),
-                            Text(
-                              isCompleted
-                                  ? "훌륭합니다! 내일 다시 만나요.\n복습은 언제나 환영이에요."
-                                  : "매일 10개씩 꾸준히!\n지금 바로 시작하세요.",
-                              style: const TextStyle(
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.2),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                isCompleted
+                                    ? Icons.check_rounded
+                                    : Icons.play_arrow_rounded,
                                 color: Colors.white,
-                                fontSize: 14,
-                                height: 1.5,
+                                size: 32,
                               ),
                             ),
                           ],
                         ),
                       ),
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          shape: BoxShape.circle,
+                    ),
+
+                    const SizedBox(height: 16), // 메인 배너와 서브 배너 사이의 간격을 좁힘
+                    // 실력 진단 배너 (서브 - 부드러운 UI 적용)
+                    GestureDetector(
+                      onTap: () async {
+                        await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const LevelTestPage(),
+                          ),
+                        );
+                        _refresh();
+                      },
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 18,
                         ),
-                        child: Icon(
-                          isCompleted
-                              ? Icons.check_rounded
-                              : Icons.play_arrow_rounded,
+                        decoration: BoxDecoration(
                           color: Colors.white,
-                          size: 30,
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.grey.withOpacity(0.08),
+                              blurRadius: 15,
+                              offset: const Offset(0, 5),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.indigo.withOpacity(0.06),
+                                borderRadius: BorderRadius.circular(
+                                  14,
+                                ), // 부드러운 사각형
+                              ),
+                              child: const Icon(
+                                Icons.psychology_alt_rounded,
+                                color: Colors.indigo,
+                                size: 26,
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    recommendedLevel != null
+                                        ? "내 실력에 맞는 맞춤 학습"
+                                        : "내 진짜 실력은 어느 정도일까?",
+                                    style: const TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.black87,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    recommendedLevel != null
+                                        ? "💡 추천 레벨: TOEIC $recommendedLevel"
+                                        : "딱 3분! 실력 진단 테스트 시작하기",
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: recommendedLevel != null
+                                          ? Colors.indigo[600]
+                                          : Colors.grey[500],
+                                      fontWeight: recommendedLevel != null
+                                          ? FontWeight.bold
+                                          : FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Icon(
+                              Icons.chevron_right_rounded,
+                              color: Colors.grey[400],
+                              size: 24,
+                            ),
+                          ],
                         ),
                       ),
-                    ],
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 35),
+                // [3] 하단 카테고리
+                const Text(
+                  "Study Category",
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
                   ),
                 ),
-              ),
-              const SizedBox(height: 30),
-              const Text(
-                "Study Category",
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
-              ),
-              const SizedBox(height: 15),
-              Expanded(
-                child: GridView.count(
+                const SizedBox(height: 16),
+
+                // GridView를 ScrollView 안에 넣기 위한 래퍼
+                GridView.count(
+                  shrinkWrap: true, // 부모의 스크롤을 따름
+                  physics: const NeverScrollableScrollPhysics(), // 자체 스크롤 비활성화
                   crossAxisCount: 2,
-                  crossAxisSpacing: 15,
-                  mainAxisSpacing: 15,
+                  crossAxisSpacing: 16,
+                  mainAxisSpacing: 16,
+                  childAspectRatio: 1.05, // 카드 비율 살짝 조정
                   children: [
                     _buildMenuCard(
                       title: "TOEIC",
                       subtitle: "실전 대비",
-                      icon: Icons.business_center,
+                      icon: Icons.business_center_rounded,
                       color: Colors.blueAccent,
                       onTap: () async {
                         await _showLevelDialog('TOEIC', ['500', '700', '900+']);
@@ -231,8 +354,8 @@ class _HomePageState extends State<HomePage> {
                     ),
                     _buildMenuCard(
                       title: "OPIc",
-                      subtitle: "말하기 연습",
-                      icon: Icons.record_voice_over,
+                      subtitle: "오픽 단어 연습",
+                      icon: Icons.record_voice_over_rounded,
                       color: Colors.orangeAccent,
                       onTap: () async {
                         await _showLevelDialog('OPIC', ['IM', 'IH', 'AL']);
@@ -242,7 +365,7 @@ class _HomePageState extends State<HomePage> {
                     _buildMenuCard(
                       title: "오답노트",
                       subtitle: "틀린 문제 복습",
-                      icon: Icons.note_alt_outlined,
+                      icon: Icons.note_alt_rounded,
                       color: Colors.green,
                       onTap: () async {
                         await Navigator.push(
@@ -265,8 +388,9 @@ class _HomePageState extends State<HomePage> {
                     ),
                   ],
                 ),
-              ),
-            ],
+                const SizedBox(height: 20),
+              ],
+            ),
           ),
         ),
       ),
@@ -288,9 +412,10 @@ class _HomePageState extends State<HomePage> {
           borderRadius: BorderRadius.circular(24),
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.withOpacity(0.05),
-              blurRadius: 10,
+              color: Colors.grey.withOpacity(0.06),
+              blurRadius: 15,
               spreadRadius: 2,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
@@ -300,7 +425,7 @@ class _HomePageState extends State<HomePage> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
+                color: color.withOpacity(0.08),
                 shape: BoxShape.circle,
               ),
               child: Icon(icon, color: color, size: 32),
@@ -367,18 +492,25 @@ class _HomePageState extends State<HomePage> {
       builder: (BuildContext dialogContext) {
         return AlertDialog(
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15),
+            borderRadius: BorderRadius.circular(20),
           ),
-          title: Text("$category 레벨 선택"),
+          title: Text(
+            "$category 레벨 선택",
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: levels.map((level) {
               return ListTile(
                 title: Text(
                   level,
-                  style: const TextStyle(fontWeight: FontWeight.bold),
+                  style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
-                trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                trailing: Icon(
+                  Icons.chevron_right_rounded,
+                  size: 20,
+                  color: Colors.grey[400],
+                ),
                 onTap: () {
                   Navigator.pop(dialogContext);
                   _showModeSelectionDialog(category, level);
@@ -397,13 +529,16 @@ class _HomePageState extends State<HomePage> {
       builder: (BuildContext dialogContext) {
         return AlertDialog(
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(24),
           ),
-          title: Text("$category $level"),
-          content: const Text("어떤 학습을 하시겠습니까?"),
+          title: Text(
+            "$category $level",
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+          content: const Text("어떤 학습을 시작하시겠어요?"),
           actionsAlignment: MainAxisAlignment.spaceEvenly,
           actions: [
-            ElevatedButton.icon(
+            OutlinedButton.icon(
               onPressed: () {
                 Navigator.pop(dialogContext);
                 Navigator.push(
@@ -414,26 +549,38 @@ class _HomePageState extends State<HomePage> {
                   ),
                 );
               },
-              icon: const Icon(Icons.menu_book_rounded),
+              icon: const Icon(Icons.menu_book_rounded, size: 20),
               label: const Text("단어장"),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white,
+              style: OutlinedButton.styleFrom(
                 foregroundColor: Colors.black87,
-                elevation: 0,
                 side: BorderSide(color: Colors.grey.shade300),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 10,
+                ),
               ),
             ),
             ElevatedButton.icon(
               onPressed: () {
                 Navigator.pop(dialogContext);
-                // ★ [로직 수정] 퀴즈 버튼 클릭 시 바로 캐시 체크
                 _checkSavedQuizAndStart(category, level);
               },
-              icon: const Icon(Icons.edit_note_rounded),
+              icon: const Icon(Icons.edit_note_rounded, size: 20),
               label: const Text("퀴즈"),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.indigo,
                 foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 10,
+                ),
+                elevation: 0,
               ),
             ),
           ],
@@ -442,27 +589,19 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // ★ 가장 중요한 로직: 캐시 키를 quiz_match_ 로 통일
   void _checkSavedQuizAndStart(String category, String level) {
     final cacheBox = Hive.box('cache');
-    // quiz_page.dart에서 사용하는 키와 동일하게 맞춤
     final String cacheKey = "quiz_match_${category}_${level}";
 
     if (cacheBox.containsKey(cacheKey)) {
-      // 기록이 있으면 문제 수 선택창을 건너뛰고 바로 QuizPage로 이동
-      // QuizPage 내부에서 "이어서 푸시겠습니까?" 팝업을 띄우게 됨
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => QuizPage(
-            category: category,
-            level: level,
-            questionCount: 0, // 이어서 풀 때는 0 전달
-          ),
+          builder: (context) =>
+              QuizPage(category: category, level: level, questionCount: 0),
         ),
       );
     } else {
-      // 기록이 없으면 문제 수 선택창 노출
       _showQuestionCountDialog(category, level);
     }
   }
@@ -473,9 +612,12 @@ class _HomePageState extends State<HomePage> {
       builder: (BuildContext dialogContext) {
         return SimpleDialog(
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15),
+            borderRadius: BorderRadius.circular(20),
           ),
-          title: const Text("문제 수 선택"),
+          title: const Text(
+            "문제 수 선택",
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
           children: [10, 20, 30].map((count) {
             return SimpleDialogOption(
               onPressed: () {
@@ -492,8 +634,17 @@ class _HomePageState extends State<HomePage> {
                 );
               },
               child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8.0),
-                child: Text("$count문제", style: const TextStyle(fontSize: 16)),
+                padding: const EdgeInsets.symmetric(
+                  vertical: 10.0,
+                  horizontal: 8.0,
+                ),
+                child: Text(
+                  "$count문제",
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
               ),
             );
           }).toList(),
