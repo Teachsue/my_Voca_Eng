@@ -8,8 +8,6 @@ class QuizPage extends StatefulWidget {
   final String category;
   final String level;
   final int questionCount;
-
-  // ★ 추가: 특정 DAY 퀴즈를 위한 변수 (선택적)
   final int? dayNumber;
   final List<Word>? dayWords;
 
@@ -40,7 +38,6 @@ class _QuizPageState extends State<QuizPage> {
   @override
   void initState() {
     super.initState();
-    // ★ 변경: DAY 퀴즈인지, 일반 퀴즈인지에 따라 캐시 키를 다르게 설정하여 충돌 방지
     _cacheKey = widget.dayNumber != null
         ? "quiz_day_${widget.category}_${widget.level}_${widget.dayNumber}"
         : "quiz_match_${widget.category}_${widget.level}";
@@ -130,13 +127,10 @@ class _QuizPageState extends State<QuizPage> {
   }
 
   void _loadNewQuizData(int count) {
-    // ★ 추가: DAY 단어 리스트가 들어왔다면, 해당 단어들로만 퀴즈 구성 (랜덤 섞기)
     if (widget.dayWords != null && widget.dayWords!.isNotEmpty) {
       _quizList = List<Word>.from(widget.dayWords!);
-      _quizList.shuffle(); // 문제 순서를 랜덤으로 섞음
-    }
-    // 기존 로직: 전체 랜덤 퀴즈일 경우
-    else {
+      _quizList.shuffle();
+    } else {
       final box = Hive.box<Word>('words');
       List<Word> filteredList = box.values.where((word) {
         return word.category == widget.category &&
@@ -177,7 +171,6 @@ class _QuizPageState extends State<QuizPage> {
 
     for (var word in _quizList) {
       String correctAnswer = word.meaning;
-      // 오답 보기는 DAY 상관없이 전체 단어 중에서 가져오므로 난이도 유지
       List<Word> distractorsPool = allWords
           .where(
             (w) => w.meaning != correctAnswer && w.spelling != word.spelling,
@@ -210,7 +203,27 @@ class _QuizPageState extends State<QuizPage> {
     final currentQuestion = _quizData[_currentIndex];
     bool correct = (selectedAnswer == currentQuestion['correctAnswer']);
 
-    if (!correct) {
+    // ★ 추가: 정답을 맞힌 경우 "학습 완료(learned_words)" 데이터로 저장
+    if (correct) {
+      try {
+        final cacheBox = Hive.box('cache');
+        // 기존에 학습한 단어 목록을 불러옵니다.
+        List<String> learnedWords = List<String>.from(
+          cacheBox.get('learned_words', defaultValue: []),
+        );
+        String spelling = currentQuestion['question'];
+
+        // 중복 방지: 아직 목록에 없는 단어라면 추가합니다.
+        if (!learnedWords.contains(spelling)) {
+          learnedWords.add(spelling);
+          cacheBox.put('learned_words', learnedWords);
+        }
+      } catch (e) {
+        print("학습 완료 단어 저장 실패: $e");
+      }
+    }
+    // 오답인 경우 기존 오답 노트에 저장
+    else {
       try {
         if (Hive.isBoxOpen('wrong_answers')) {
           final wrongBox = Hive.box<Word>('wrong_answers');
@@ -298,7 +311,6 @@ class _QuizPageState extends State<QuizPage> {
       (k, v) => MapEntry(k.toString(), v.toString()),
     );
 
-    // ★ 변경: DAY 퀴즈일 경우 상단 타이틀 다르게 표시
     String appBarTitle = widget.dayNumber != null
         ? "${widget.category} ${widget.level} - DAY ${widget.dayNumber} (${_currentIndex + 1}/${_quizList.length})"
         : "${widget.category} ${widget.level} (${_currentIndex + 1}/${_quizList.length})";

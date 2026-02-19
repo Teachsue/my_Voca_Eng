@@ -13,6 +13,8 @@ class StatisticsPage extends StatefulWidget {
 class _StatisticsPageState extends State<StatisticsPage> {
   int _totalWordsCount = 0;
   int _wrongAnswersCount = 0;
+  int _learnedWordsCount = 0; // ★ 추가: 퀴즈에서 맞춘 단어 수
+
   bool _isTodayCompleted = false;
   String _recommendedLevel = "미응시";
 
@@ -25,7 +27,13 @@ class _StatisticsPageState extends State<StatisticsPage> {
   void _loadStatistics() {
     // 1. 전체 단어 수
     final wordBox = Hive.box<Word>('words');
-    _totalWordsCount = wordBox.values.where((w) => w.type == 'Word').length;
+
+    // 중복 없는 실제 단어 수 계산
+    final Map<String, Word> uniqueMap = {};
+    for (var w in wordBox.values.where((w) => w.type == 'Word')) {
+      uniqueMap.putIfAbsent(w.spelling.trim().toLowerCase(), () => w);
+    }
+    _totalWordsCount = uniqueMap.length;
 
     // 2. 오답 노트 단어 수
     if (Hive.isBoxOpen('wrong_answers')) {
@@ -33,9 +41,10 @@ class _StatisticsPageState extends State<StatisticsPage> {
       _wrongAnswersCount = wrongBox.length;
     }
 
-    // 3. 오늘 학습 완료 여부 & 추천 레벨
+    // 3. 오늘 학습 완료 여부 & 추천 레벨 & ★ 마스터한 단어 수
     final cacheBox = Hive.box('cache');
     final String todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
+
     _isTodayCompleted = cacheBox.get(
       "today_completed_$todayStr",
       defaultValue: false,
@@ -45,11 +54,25 @@ class _StatisticsPageState extends State<StatisticsPage> {
       defaultValue: "미응시",
     );
 
+    // ★ 추가: 퀴즈에서 정답을 맞춘 단어 리스트 가져오기
+    List<String> learnedWords = List<String>.from(
+      cacheBox.get('learned_words', defaultValue: []),
+    );
+    _learnedWordsCount = learnedWords.length;
+
     setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
+    // 진도율 계산 (0으로 나누기 방지)
+    double progressRatio = _totalWordsCount > 0
+        ? (_learnedWordsCount / _totalWordsCount)
+        : 0.0;
+    String percentString = (progressRatio * 100).toStringAsFixed(
+      1,
+    ); // 소수점 첫째 자리까지
+
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
@@ -76,7 +99,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
             ),
             const SizedBox(height: 20),
 
-            // [1] 레벨 & 오늘의 학습 상태 (가로 배치)
+            // [1] 레벨 & 오늘의 학습 상태
             Row(
               children: [
                 Expanded(
@@ -106,7 +129,18 @@ class _StatisticsPageState extends State<StatisticsPage> {
             ),
             const SizedBox(height: 15),
 
-            // [2] 취약점 분석 (오답 노트)
+            // ★ [2] 새로운 기능: 전체 학습 진도율 (마스터한 단어)
+            _buildWideStatCard(
+              title: "전체 학습 진도율 ($percentString%)",
+              subtitle: "퀴즈에서 한 번 이상 정답을 맞춘 단어의 비율입니다. 꾸준히 게이지를 채워보세요!",
+              value: "$_learnedWordsCount / $_totalWordsCount",
+              icon: Icons.trending_up_rounded,
+              color: Colors.blueAccent,
+              progressValue: progressRatio,
+            ),
+            const SizedBox(height: 15),
+
+            // [3] 취약점 분석 (오답 노트)
             _buildWideStatCard(
               title: "현재 복습이 필요한 단어",
               subtitle: "오답 노트에 쌓인 단어 수입니다. 틈틈이 복습해주세요!",
@@ -116,17 +150,6 @@ class _StatisticsPageState extends State<StatisticsPage> {
               progressValue: _totalWordsCount > 0
                   ? (_wrongAnswersCount / _totalWordsCount)
                   : 0.0,
-            ),
-            const SizedBox(height: 15),
-
-            // [3] 앱 데이터 현황
-            _buildWideStatCard(
-              title: "포켓보카 전체 단어량",
-              subtitle: "현재 앱에 등록된 학습 가능한 총 단어 수입니다.",
-              value: "$_totalWordsCount개",
-              icon: Icons.storage_rounded,
-              color: Colors.blueAccent,
-              progressValue: 1.0, // 꽉 찬 게이지바
             ),
 
             const SizedBox(height: 40),
@@ -204,7 +227,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
     );
   }
 
-  // 직사각형 형태의 넓은 통계 카드 위젯 (프로그레스 바 포함)
+  // 직사각형 형태의 넓은 통계 카드 위젯
   Widget _buildWideStatCard({
     required String title,
     required String subtitle,
@@ -277,7 +300,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
             ],
           ),
           const SizedBox(height: 20),
-          // 프로그레스 바 (시각적 효과)
+          // 프로그레스 바
           ClipRRect(
             borderRadius: BorderRadius.circular(10),
             child: LinearProgressIndicator(
