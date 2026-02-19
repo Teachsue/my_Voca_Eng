@@ -18,9 +18,43 @@ class _WrongAnswerPageState extends State<WrongAnswerPage> {
     _wrongBox = Hive.box<Word>('wrong_answers');
   }
 
+  // 낱개 삭제 함수
   void _deleteWord(String key) {
     _wrongBox.delete(key);
     setState(() {}); // 화면 갱신
+  }
+
+  // ★ 추가: 전체 삭제 확인 다이얼로그 함수
+  void _showDeleteAllDialog() {
+    if (_wrongBox.isEmpty) return; // 비어있으면 실행 안 함
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("오답노트 초기화"),
+        content: const Text("저장된 모든 오답을 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다."),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("취소"),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              await _wrongBox.clear(); // Hive 박스 전체 비우기
+              if (mounted) {
+                setState(() {}); // 화면 갱신
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text("오답노트가 모두 비워졌습니다.")),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+            child: const Text("전체 삭제", style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -35,6 +69,16 @@ class _WrongAnswerPageState extends State<WrongAnswerPage> {
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 0,
+        // ★ 추가: AppBar 우측 액션 버튼
+        actions: [
+          if (wrongWords.isNotEmpty) // 오답이 있을 때만 휴지통 아이콘 표시
+            IconButton(
+              icon: const Icon(Icons.delete_sweep, color: Colors.redAccent),
+              onPressed: _showDeleteAllDialog,
+              tooltip: "전체 삭제",
+            ),
+          const SizedBox(width: 10),
+        ],
       ),
       body: wrongWords.isEmpty
           ? Center(
@@ -106,11 +150,11 @@ class _WrongAnswerPageState extends State<WrongAnswerPage> {
                           color: Colors.grey,
                         ),
                         onPressed: () {
-                          // 스펠링을 키로 사용하여 삭제
                           _deleteWord(word.spelling);
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
                               content: Text("암기 완료! 오답노트에서 삭제했습니다."),
+                              duration: Duration(seconds: 1),
                             ),
                           );
                         },
