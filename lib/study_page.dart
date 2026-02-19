@@ -1,20 +1,19 @@
-import 'dart:math';
 import 'package:flutter/material.dart';
-// import 'package:hive_flutter/hive_flutter.dart'; // 더 이상 이 페이지에서 Hive를 직접 호출하지 않으므로 주석/삭제해도 무방합니다.
 import 'word_model.dart';
+import 'quiz_page.dart';
 
 class StudyPage extends StatefulWidget {
   final String category;
   final String level;
-  final int dayNumber; // ★ 추가: 몇 번째 DAY인지 나타내는 변수
-  final List<Word> dayWords; // ★ 추가: 해당 DAY에 할당된 단어 리스트
+  final List<List<Word>> allDayChunks;
+  final int initialDayIndex;
 
   const StudyPage({
     super.key,
     required this.category,
     required this.level,
-    required this.dayNumber,
-    required this.dayWords,
+    required this.allDayChunks,
+    required this.initialDayIndex,
   });
 
   @override
@@ -22,278 +21,181 @@ class StudyPage extends StatefulWidget {
 }
 
 class _StudyPageState extends State<StudyPage> {
-  List<Word> _allWords = [];
-  List<Word> _currentWords = [];
-
-  int _currentPage = 1;
-  final int _itemsPerPage = 20;
-
-  final ScrollController _scrollController = ScrollController();
+  late PageController _pageController;
+  late int _currentDayIndex;
 
   @override
   void initState() {
     super.initState();
-    // ★ 변경: Hive에서 불러오는 대신, 생성자로 전달받은 단어 리스트를 바로 사용합니다.
-    _allWords = widget.dayWords;
-    _updatePageData();
+    _currentDayIndex = widget.initialDayIndex;
+    _pageController = PageController(initialPage: _currentDayIndex);
   }
 
   @override
   void dispose() {
-    _scrollController.dispose();
+    _pageController.dispose();
     super.dispose();
-  }
-
-  // 페이지 이동 다이얼로그 함수
-  void _showJumpToPageDialog() {
-    final int totalPages = (_allWords.length / _itemsPerPage).ceil();
-    final TextEditingController pageEditingController = TextEditingController();
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text("페이지 이동"),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text("이동할 페이지를 입력하세요. (1 ~ $totalPages)"),
-              TextField(
-                controller: pageEditingController,
-                keyboardType: TextInputType.number,
-                autofocus: true,
-                decoration: const InputDecoration(hintText: "페이지 번호"),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("취소"),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                final int? targetPage = int.tryParse(
-                  pageEditingController.text,
-                );
-                if (targetPage != null &&
-                    targetPage >= 1 &&
-                    targetPage <= totalPages) {
-                  _changePage(targetPage);
-                  Navigator.pop(context);
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text("1에서 $totalPages 사이의 숫자를 입력해주세요.")),
-                  );
-                }
-              },
-              child: const Text("이동"),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void _updatePageData() {
-    if (_allWords.isEmpty) {
-      _currentWords = [];
-      return;
-    }
-
-    int startIndex = (_currentPage - 1) * _itemsPerPage;
-    int endIndex = min(startIndex + _itemsPerPage, _allWords.length);
-
-    setState(() {
-      _currentWords = _allWords.sublist(startIndex, endIndex);
-    });
-  }
-
-  void _changePage(int newPage) {
-    setState(() {
-      _currentPage = newPage;
-      _updatePageData();
-    });
-
-    if (_scrollController.hasClients) {
-      _scrollController.jumpTo(0);
-    }
   }
 
   @override
   Widget build(BuildContext context) {
-    int totalPages = (_allWords.length / _itemsPerPage).ceil();
-    if (totalPages == 0) totalPages = 1;
+    // ★ 기기의 하단 안전 여백(갤럭시 내브바, 아이폰 홈바 등)의 높이를 가져옵니다.
+    final double bottomPadding = MediaQuery.of(context).padding.bottom;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
       appBar: AppBar(
-        // ★ 변경: 상단 타이틀에 DAY 번호가 표시되도록 수정
         title: Text(
-          "${widget.category} ${widget.level} - DAY ${widget.dayNumber}",
+          "${widget.category} ${widget.level} - DAY ${_currentDayIndex + 1}",
         ),
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.find_in_page_outlined),
-            onPressed: _showJumpToPageDialog,
-            tooltip: "페이지 이동",
-          ),
-          const SizedBox(width: 10),
-        ],
       ),
-      body: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(vertical: 10),
-            color: Colors.white,
-            width: double.infinity,
-            alignment: Alignment.center,
-            child: Text(
-              "총 ${_allWords.length}개 단어 중 ${_currentWords.length}개 표시",
-              style: TextStyle(color: Colors.grey[600], fontSize: 14),
-            ),
-          ),
+      body: PageView.builder(
+        controller: _pageController,
+        onPageChanged: (index) {
+          setState(() {
+            _currentDayIndex = index;
+          });
+        },
+        itemCount: widget.allDayChunks.length,
+        itemBuilder: (context, dayIndex) {
+          final dayWords = widget.allDayChunks[dayIndex];
+          final int dayNumber = dayIndex + 1;
 
-          Expanded(
-            child: _currentWords.isEmpty
-                ? const Center(child: Text("등록된 단어가 없습니다."))
-                : ListView.separated(
-                    controller: _scrollController,
-                    padding: const EdgeInsets.all(20),
-                    itemCount: _currentWords.length,
-                    separatorBuilder: (context, index) =>
-                        const SizedBox(height: 15),
-                    itemBuilder: (context, index) {
-                      final word = _currentWords[index];
-                      int globalIndex =
-                          ((_currentPage - 1) * _itemsPerPage) + index + 1;
-
-                      return Container(
+          return Column(
+            children: [
+              // 단어장 리스트 영역
+              Expanded(
+                child: dayWords.isEmpty
+                    ? const Center(child: Text("등록된 단어가 없습니다."))
+                    : ListView.separated(
+                        key: ValueKey("list_$dayIndex"),
                         padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(15),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.grey.withOpacity(0.1),
-                              blurRadius: 5,
-                              spreadRadius: 2,
-                            ),
-                          ],
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 35,
-                              height: 35,
-                              alignment: Alignment.center,
-                              decoration: BoxDecoration(
-                                color: Colors.blue[50],
-                                shape: BoxShape.circle,
-                              ),
-                              child: Text(
-                                "$globalIndex",
-                                style: TextStyle(
-                                  color: Colors.blue[800],
-                                  fontWeight: FontWeight.bold,
+                        itemCount: dayWords.length,
+                        separatorBuilder: (context, index) =>
+                            const SizedBox(height: 15),
+                        itemBuilder: (context, index) {
+                          final word = dayWords[index];
+                          int wordNumber = index + 1;
+
+                          return Container(
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(15),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.grey.withOpacity(0.1),
+                                  blurRadius: 5,
+                                  spreadRadius: 2,
                                 ),
-                              ),
+                              ],
                             ),
-                            const SizedBox(width: 15),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    word.spelling,
-                                    style: const TextStyle(
-                                      fontSize: 18,
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 35,
+                                  height: 35,
+                                  alignment: Alignment.center,
+                                  decoration: BoxDecoration(
+                                    color: Colors.indigo[50],
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Text(
+                                    "$wordNumber",
+                                    style: TextStyle(
+                                      color: Colors.indigo[800],
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    word.meaning,
-                                    style: TextStyle(
-                                      fontSize: 15,
-                                      color: Colors.grey[700],
-                                    ),
+                                ),
+                                const SizedBox(width: 15),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        word.spelling,
+                                        style: const TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        word.meaning,
+                                        style: TextStyle(
+                                          fontSize: 15,
+                                          color: Colors.grey[700],
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                ],
-                              ),
+                                ),
+                              ],
                             ),
-                          ],
+                          );
+                        },
+                      ),
+              ),
+
+              // ★ 하단 고정 시험 버튼 (갤럭시 내비게이션 바 완벽 대응)
+              Container(
+                // 기본 패딩 15에 기기별 하단 내비게이션 바 높이(bottomPadding)를 더해줍니다.
+                padding: EdgeInsets.fromLTRB(20, 15, 20, 15 + bottomPadding),
+                decoration: BoxDecoration(
+                  color: Colors.white, // 배경색이 내비게이션 바 뒤로도 예쁘게 확장됩니다.
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.grey.withOpacity(0.08),
+                      blurRadius: 10,
+                      offset: const Offset(0, -5),
+                    ),
+                  ],
+                ),
+                child: SizedBox(
+                  width: double.infinity,
+                  height: 60, // 버튼 자체의 시원한 높이 유지
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => QuizPage(
+                            category: widget.category,
+                            level: widget.level,
+                            questionCount: 0,
+                            dayNumber: dayNumber,
+                            dayWords: dayWords,
+                          ),
                         ),
                       );
                     },
-                  ),
-          ),
-
-          Container(
-            padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 20),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.grey.withOpacity(0.1),
-                  blurRadius: 10,
-                  offset: const Offset(0, -5),
-                ),
-              ],
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                ElevatedButton(
-                  onPressed: _currentPage > 1
-                      ? () => _changePage(_currentPage - 1)
-                      : null,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: Colors.black,
-                    elevation: 0,
-                    side: BorderSide(color: Colors.grey[300]!),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
+                    icon: const Icon(Icons.edit_document, size: 24),
+                    label: Text(
+                      "DAY $dayNumber 시험 보기",
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
-                  child: const Icon(Icons.chevron_left),
-                ),
-
-                GestureDetector(
-                  onTap: _showJumpToPageDialog,
-                  child: Text(
-                    "$_currentPage / $totalPages",
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      decoration: TextDecoration.underline,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.indigo,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(15),
+                      ),
+                      elevation: 0,
                     ),
                   ),
                 ),
-
-                ElevatedButton(
-                  onPressed: _currentPage < totalPages
-                      ? () => _changePage(_currentPage + 1)
-                      : null,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: Colors.black,
-                    elevation: 0,
-                    side: BorderSide(color: Colors.grey[300]!),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                  child: const Icon(Icons.chevron_right),
-                ),
-              ],
-            ),
-          ),
-        ],
+              ),
+            ],
+          );
+        },
       ),
     );
   }

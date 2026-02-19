@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'word_model.dart';
 import 'study_page.dart';
-import 'quiz_page.dart'; // ★ 추가: 퀴즈 페이지로 가기 위해 import
 
 class DaySelectionPage extends StatefulWidget {
   final String category;
@@ -43,7 +42,6 @@ class _DaySelectionPageState extends State<DaySelectionPage> {
     }
 
     List<Word> finalPool = uniqueMap.values.toList();
-    // 알파벳 순으로 정렬하여 DAY 구성이 항상 일정하도록 고정
     finalPool.sort(
       (a, b) => a.spelling.toLowerCase().compareTo(b.spelling.toLowerCase()),
     );
@@ -57,88 +55,6 @@ class _DaySelectionPageState extends State<DaySelectionPage> {
     }
 
     setState(() {});
-  }
-
-  // ★ 추가: DAY 클릭 시 뜨는 모드 선택 팝업
-  void _showDayActionDialog(int dayNumber, List<Word> dayWords) {
-    showDialog(
-      context: context,
-      builder: (BuildContext dialogContext) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
-          ),
-          title: Text(
-            "DAY $dayNumber",
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
-          content: const Text("어떤 학습을 진행할까요?"),
-          actionsAlignment: MainAxisAlignment.spaceEvenly,
-          actions: [
-            OutlinedButton.icon(
-              onPressed: () {
-                Navigator.pop(dialogContext); // 다이얼로그 닫기
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => StudyPage(
-                      category: widget.category,
-                      level: widget.level,
-                      dayNumber: dayNumber,
-                      dayWords: dayWords, // 단어장으로 데이터 전달
-                    ),
-                  ),
-                );
-              },
-              icon: const Icon(Icons.menu_book_rounded, size: 20),
-              label: const Text("단어장"),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: Colors.black87,
-                side: BorderSide(color: Colors.grey.shade300),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 10,
-                ),
-              ),
-            ),
-            ElevatedButton.icon(
-              onPressed: () {
-                Navigator.pop(dialogContext); // 다이얼로그 닫기
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => QuizPage(
-                      category: widget.category,
-                      level: widget.level,
-                      questionCount: 0, // DAY 퀴즈는 개수가 아닌 dayWords 기준으로 작동
-                      dayNumber: dayNumber, // DAY 번호 전달 (캐시 분리용)
-                      dayWords: dayWords, // ★ 핵심: 해당 DAY의 단어만 퀴즈로 던짐
-                    ),
-                  ),
-                );
-              },
-              icon: const Icon(Icons.edit_note_rounded, size: 20),
-              label: const Text("단어시험"),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.indigo,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 10,
-                ),
-                elevation: 0,
-              ),
-            ),
-          ],
-        );
-      },
-    );
   }
 
   @override
@@ -172,8 +88,20 @@ class _DaySelectionPageState extends State<DaySelectionPage> {
           final int wordCount = _dayChunks[index].length;
 
           return GestureDetector(
-            // ★ 변경: 카드를 누르면 다이얼로그 호출
-            onTap: () => _showDayActionDialog(dayNumber, _dayChunks[index]),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => StudyPage(
+                    category: widget.category,
+                    level: widget.level,
+                    // ★ 변경: 전체 청크와 현재 클릭한 인덱스를 전달
+                    allDayChunks: _dayChunks,
+                    initialDayIndex: index,
+                  ),
+                ),
+              );
+            },
             child: Container(
               decoration: BoxDecoration(
                 color: Colors.white,
