@@ -34,28 +34,33 @@ class _QuizPageState extends State<QuizPage> {
   @override
   void initState() {
     super.initState();
-    // 캐시 키 설정
     _cacheKey = "quiz_match_${widget.category}_${widget.level}";
 
-    // 화면이 빌드된 후 초기화 로직 실행
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _initializeQuiz();
+      _checkProgressAndInitialize();
     });
   }
 
-  // 1. 초기화 로직: 캐시 확인 후 알림창 띄우기
-  void _initializeQuiz() {
+  // 1. 진행 상황 체크 및 초기화
+  void _checkProgressAndInitialize() {
     final cacheBox = Hive.box('cache');
     final savedData = cacheBox.get(_cacheKey);
 
     if (savedData != null) {
-      _showResumeDialog(savedData);
+      int savedIndex = savedData['index'] ?? 0;
+      // 한 문제라도 풀었다면 이어풀기 팝업, 아니면 새로 시작
+      if (savedIndex > 0) {
+        _showResumeDialog(savedData);
+      } else {
+        _clearProgress();
+        _loadNewQuizData(widget.questionCount);
+      }
     } else {
-      _loadNewQuizData();
+      _loadNewQuizData(widget.questionCount);
     }
   }
 
-  // 2. 이어서 풀기 의사를 묻는 알림창
+  // 2. 이어풀기 알림창
   void _showResumeDialog(dynamic savedData) {
     showDialog(
       context: context,
@@ -68,7 +73,7 @@ class _QuizPageState extends State<QuizPage> {
             onPressed: () {
               _clearProgress();
               Navigator.pop(context);
-              _loadNewQuizData();
+              _loadNewQuizData(widget.questionCount);
             },
             child: const Text("새로 풀기", style: TextStyle(color: Colors.grey)),
           ),
@@ -85,32 +90,60 @@ class _QuizPageState extends State<QuizPage> {
     );
   }
 
-  // 3. 캐시 데이터로부터 상태 복구
+  // 3. 캐시 복구 (안전하게 spelling으로 다시 찾기)
   void _restoreFromCache(dynamic savedData) {
-    setState(() {
-      _currentIndex = savedData['index'] ?? 0;
-      _wrongAnswersList = (savedData['wrongAnswers'] as List)
-          .map((e) => Map<String, dynamic>.from(e))
-          .toList();
-      _quizData = (savedData['quizData'] as List)
-          .map((e) => Map<String, dynamic>.from(e))
-          .toList();
+    final wordBox = Hive.box<Word>('words');
+    final allWords = wordBox.values.toList();
 
-      // 저장된 데이터로부터 Word 객체 리스트 추출
-      _quizList = _quizData.map((d) => d['word'] as Word).toList();
-    });
+    try {
+      setState(() {
+        _currentIndex = savedData['index'] ?? 0;
+        _wrongAnswersList = (savedData['wrongAnswers'] as List)
+            .map((e) => Map<String, dynamic>.from(e))
+            .toList();
+
+        // 중요: quizData 내부에 저장된 정보를 기반으로 Word 객체를 다시 매칭
+        _quizData = (savedData['quizData'] as List)
+            .map((e) => Map<String, dynamic>.from(e))
+            .toList();
+
+        _quizList = [];
+        for (var data in _quizData) {
+          // 문제로 나온 단어 철자를 기준으로 다시 찾음
+          final word = allWords.firstWhere(
+            (w) => w.spelling == data['question'] && w.type == 'Word',
+            orElse: () =>
+                allWords.firstWhere((w) => w.spelling == data['question']),
+          );
+          _quizList.add(word);
+          // quizData 안의 word 객체 참조도 갱신 (캐스팅 에러 방지)
+          data['word'] = word;
+        }
+      });
+    } catch (e) {
+      print("복구 중 에러 발생: $e");
+      _loadNewQuizData(widget.questionCount);
+    }
   }
 
-  // 4. 새 퀴즈 데이터 생성 로드
-  void _loadNewQuizData() {
+  // 4. 새 퀴즈 생성
+  void _loadNewQuizData(int count) {
     final box = Hive.box<Word>('words');
+
+    // type이 'Word'인 데이터만 필터링
     List<Word> filteredList = box.values.where((word) {
       return word.category == widget.category &&
           word.level == widget.level &&
           word.type == 'Word';
     }).toList();
 
-    // 중복 제거
+    // 만약 'Word' 타입이 하나도 없다면 모든 타입에서 다시 검색 (방어 로직)
+    if (filteredList.isEmpty) {
+      filteredList = box.values.where((word) {
+        return word.category == widget.category && word.level == widget.level;
+      }).toList();
+    }
+
     final Map<String, Word> uniqueMap = {};
     for (var w in filteredList) {
       uniqueMap.putIfAbsent(w.spelling.trim().toLowerCase(), () => w);
@@ -118,16 +151,20 @@ class _QuizPageState extends State<QuizPage> {
 
     List<Word> finalPool = uniqueMap.values.toList();
     finalPool.shuffle();
-    _quizList = finalPool.take(widget.questionCount).toList();
+
+    // 요청한 문제 수만큼 가져옴 (데이터가 부족하면 있는 만큼만)
+    int targetCount = count > 0 ? count : 10;
+    _quizList = finalPool.take(min(targetCount, finalPool.length)).toList();
 
     if (_quizList.isNotEmpty) {
       _generateQuizQuestions();
       _saveProgress();
     }
+
     if (mounted) setState(() {});
   }
 
-  // 5. 퀴즈 문제 및 보기 구성 (의미-단어 매칭 포함)
+  // 5. 보기 생성 로직
   void _generateQuizQuestions() {
     final box = Hive.box<Word>('words');
     final allWords = box.values.where((w) => w.type == 'Word').toList();
@@ -143,7 +180,6 @@ class _QuizPageState extends State<QuizPage> {
       distractorsPool.shuffle();
       List<Word> selectedDistractors = distractorsPool.take(3).toList();
 
-      // 보기와 해당 단어의 영문 스펠링을 매칭한 맵 생성
       Map<String, String> meaningToSpelling = {correctAnswer: word.spelling};
       for (var d in selectedDistractors) {
         meaningToSpelling[d.meaning] = d.spelling;
@@ -162,7 +198,7 @@ class _QuizPageState extends State<QuizPage> {
     }
   }
 
-  // 6. 정답 체크 및 오답 저장
+  // 6. 정답 확인 및 오답 저장
   void _checkAnswer(String selectedAnswer) {
     if (_isChecked) return;
 
@@ -175,7 +211,6 @@ class _QuizPageState extends State<QuizPage> {
           final wrongBox = Hive.box<Word>('wrong_answers');
           final Word originWord = currentQuestion['word'];
 
-          // Hive 객체 소유권 충돌 방지를 위해 새 객체로 복사하여 저장
           final wordToSave = Word(
             category: originWord.category,
             level: originWord.level,
@@ -185,9 +220,7 @@ class _QuizPageState extends State<QuizPage> {
           );
           wrongBox.put(wordToSave.spelling, wordToSave);
         }
-      } catch (e) {
-        print("오답 저장 실패: $e");
-      }
+      } catch (e) {}
     }
 
     setState(() {
@@ -206,7 +239,6 @@ class _QuizPageState extends State<QuizPage> {
     _saveProgress();
   }
 
-  // 7. 다음 문제로 이동
   void _nextQuestion() {
     if (_currentIndex < _quizData.length - 1) {
       setState(() {
@@ -229,9 +261,10 @@ class _QuizPageState extends State<QuizPage> {
     }
   }
 
-  // 8. 진행 상황 저장 및 삭제
   void _saveProgress() {
     final cacheBox = Hive.box('cache');
+    // Hive 저장을 위해 Map에서 Word 객체를 잠시 제거하거나 철자로 변환하여 저장하는 것이 안전함
+    // 여기서는 로직 단순화를 위해 현재 quizData를 저장하되 복구 시 보정함
     cacheBox.put(_cacheKey, {
       'index': _currentIndex,
       'wrongAnswers': _wrongAnswersList,
@@ -243,10 +276,19 @@ class _QuizPageState extends State<QuizPage> {
 
   @override
   Widget build(BuildContext context) {
-    if (_quizList.isEmpty)
-      return const Scaffold(body: Center(child: Text("데이터가 부족합니다.")));
-    if (_quizData.isEmpty)
+    // 로딩 중이거나 데이터가 진짜 없는 경우 처리
+    if (_quizList.isEmpty && _quizData.isEmpty) {
+      return Scaffold(
+        appBar: AppBar(title: const Text("퀴즈")),
+        body: const Center(
+          child: Text("해당 레벨에 학습 데이터가 없습니다.\n다른 레벨을 선택해 보세요!"),
+        ),
+      );
+    }
+
+    if (_quizData.isEmpty) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
 
     final currentQuestion = _quizData[_currentIndex];
     final options = currentQuestion['options'] as List<String>;
@@ -307,7 +349,6 @@ class _QuizPageState extends State<QuizPage> {
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
-            // 문제 카드 (영어 단어 중앙 배치)
             Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 60, horizontal: 20),
@@ -333,7 +374,6 @@ class _QuizPageState extends State<QuizPage> {
               ),
             ),
             const SizedBox(height: 30),
-            // 선택지 리스트
             ...options.map((option) {
               bool isCorrectOption = option == currentQuestion['correctAnswer'];
               bool isSelected = option == _userSelectedAnswer;
@@ -343,7 +383,6 @@ class _QuizPageState extends State<QuizPage> {
               Color textColor = Colors.black87;
 
               String originalSpelling = meaningToSpelling[option] ?? "";
-              // 정답 확인 후에는 영어 단어를 아래에 표기
               String buttonText = _isChecked
                   ? "$option\n($originalSpelling)"
                   : option;
@@ -365,11 +404,10 @@ class _QuizPageState extends State<QuizPage> {
               return Padding(
                 padding: const EdgeInsets.only(bottom: 15),
                 child: Container(
-                  // SizedBox 대신 Container 사용 (높이 고정)
                   width: double.infinity,
-                  height: 85, // ★ 높이를 85로 고정하여 UI 흔들림 방지
+                  height: 85,
                   child: OutlinedButton(
-                    onPressed: () => _checkCheckAnswer(option),
+                    onPressed: () => _checkAnswer(option),
                     style: OutlinedButton.styleFrom(
                       backgroundColor: btnColor,
                       side: BorderSide(color: borderCol, width: 2),
@@ -385,7 +423,7 @@ class _QuizPageState extends State<QuizPage> {
                       buttonText,
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        fontSize: _isChecked ? 15 : 18,
+                        fontSize: 17,
                         fontWeight: isCorrectOption && _isChecked
                             ? FontWeight.bold
                             : FontWeight.normal,
@@ -400,10 +438,5 @@ class _QuizPageState extends State<QuizPage> {
         ),
       ),
     );
-  }
-
-  // 버튼 클릭 시 _checkAnswer 호출을 위한 래퍼 함수 (오타 방지)
-  void _checkCheckAnswer(String option) {
-    _checkAnswer(option);
   }
 }

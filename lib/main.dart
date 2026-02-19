@@ -4,30 +4,28 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart';
 
-// [중요] 필요한 파일들이 모두 import 되어 있어야 합니다.
 import 'word_model.dart';
 import 'data_loader.dart';
-import 'todays_quiz_page.dart';
 import 'quiz_page.dart';
 import 'study_page.dart';
 import 'calendar_page.dart';
 import 'study_record_service.dart';
 import 'wrong_answer_page.dart';
-import 'todays_word_list_page.dart'; // ★ 단어 리스트 페이지 import 필수
+import 'todays_word_list_page.dart';
 
 void main() async {
-  // 1. 플러터 엔진 초기화
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 2. ★ 세로 모드 방향 고정 (상/하 방향 세로만 허용)
+  // 세로 모드 고정
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
 
-  // 3. Hive 및 서비스 초기화
   await Hive.initFlutter();
-  Hive.registerAdapter(WordAdapter());
+  if (!Hive.isAdapterRegistered(0)) {
+    Hive.registerAdapter(WordAdapter());
+  }
 
   await Hive.openBox<Word>('words');
   await Hive.openBox('cache');
@@ -37,7 +35,6 @@ void main() async {
   await initializeDateFormatting();
   await DataLoader.loadData();
 
-  // 4. 앱 실행
   runApp(const MyApp());
 }
 
@@ -68,7 +65,6 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  // 화면 갱신용 함수
   void _refresh() {
     if (mounted) setState(() {});
   }
@@ -90,7 +86,6 @@ class _HomePageState extends State<HomePage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 20),
-              // [1] 상단 헤더
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -144,12 +139,10 @@ class _HomePageState extends State<HomePage> {
                 ],
               ),
               const SizedBox(height: 30),
-
-              // [2] 메인 배너 (오늘의 단어)
               GestureDetector(
                 onTap: () async {
-                  await _startTodaysQuiz(); // 퀴즈 시작 로직 호출
-                  _refresh(); // 퀴즈 끝나고 돌아오면 화면 갱신
+                  await _startTodaysQuiz();
+                  _refresh();
                 },
                 child: Container(
                   width: double.infinity,
@@ -163,15 +156,6 @@ class _HomePageState extends State<HomePage> {
                       end: Alignment.bottomRight,
                     ),
                     borderRadius: BorderRadius.circular(24),
-                    boxShadow: [
-                      BoxShadow(
-                        color: isCompleted
-                            ? Colors.grey.withOpacity(0.3)
-                            : const Color(0xFF5B86E5).withOpacity(0.3),
-                        blurRadius: 15,
-                        offset: const Offset(0, 8),
-                      ),
-                    ],
                   ),
                   child: Row(
                     children: [
@@ -219,9 +203,7 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ),
               ),
-
               const SizedBox(height: 30),
-              // [3] 하단 카테고리
               const Text(
                 "Study Category",
                 style: TextStyle(
@@ -236,7 +218,6 @@ class _HomePageState extends State<HomePage> {
                   crossAxisCount: 2,
                   crossAxisSpacing: 15,
                   mainAxisSpacing: 15,
-                  childAspectRatio: 1.0,
                   children: [
                     _buildMenuCard(
                       title: "TOEIC",
@@ -327,11 +308,7 @@ class _HomePageState extends State<HomePage> {
             const SizedBox(height: 16),
             Text(
               title,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
-              ),
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 4),
             Text(
@@ -344,23 +321,13 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // ----------------------------------------------------------------------
-  // 아래 기능 함수들: _HomePageState 클래스 내부에 있어야 에러가 안 납니다!
-  // ----------------------------------------------------------------------
-
-  // 오늘의 단어 시작 함수
-  // [lib/main.dart 내부의 함수]
-
   Future<void> _startTodaysQuiz() async {
     final box = Hive.box<Word>('words');
     final cacheBox = Hive.box('cache');
     final String todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
-
-    // 오늘의 단어 목록 키
     final String todayKey = "today_list_$todayStr";
     List<Word> todaysWords = [];
 
-    // 1. 목록 불러오기
     if (cacheBox.containsKey(todayKey)) {
       List<String> savedSpellings = List<String>.from(cacheBox.get(todayKey));
       final allWords = box.values.toList();
@@ -372,61 +339,26 @@ class _HomePageState extends State<HomePage> {
       }
     }
 
-    // 2. 목록 생성하기 (없을 경우)
     if (todaysWords.isEmpty) {
       final allWords = box.values.where((w) => w.type == 'Word').toList();
-      if (allWords.isEmpty) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("데이터가 없습니다! word_data.json을 확인해주세요.")),
-        );
-        return;
-      }
+      if (allWords.isEmpty) return;
       todaysWords = (allWords..shuffle()).take(10).toList();
-      List<String> spellingsToSave = todaysWords
-          .map((w) => w.spelling)
-          .toList();
-      cacheBox.put(todayKey, spellingsToSave);
+      cacheBox.put(todayKey, todaysWords.map((w) => w.spelling).toList());
     }
 
-    // 3. 완료 여부 확인 및 페이지 이동
     bool isCompleted = cacheBox.get(
       "today_completed_$todayStr",
       defaultValue: false,
     );
 
     if (!mounted) return;
-
-    if (isCompleted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("오늘 학습을 완료하셨네요! 복습을 위해 단어장을 보여드릴게요. 📖"),
-          duration: Duration(seconds: 2),
-        ),
-      );
-
-      // ★ 여기가 수정된 포인트! isCompleted: true를 전달합니다.
-      await Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => TodaysWordListPage(
-            words: todaysWords,
-            isCompleted: true, // 복습 모드 켜기
-          ),
-        ),
-      );
-    } else {
-      // 퀴즈 전 모드
-      await Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => TodaysWordListPage(
-            words: todaysWords,
-            isCompleted: false, // 기본 모드
-          ),
-        ),
-      );
-    }
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) =>
+            TodaysWordListPage(words: todaysWords, isCompleted: isCompleted),
+      ),
+    );
   }
 
   Future<void> _showLevelDialog(String category, List<String> levels) async {
@@ -448,8 +380,8 @@ class _HomePageState extends State<HomePage> {
                 ),
                 trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                 onTap: () {
-                  Navigator.pop(dialogContext); // 다이얼로그 닫기
-                  _showModeSelectionDialog(category, level); // 다음 단계
+                  Navigator.pop(dialogContext);
+                  _showModeSelectionDialog(category, level);
                 },
               );
             }).toList(),
@@ -494,6 +426,7 @@ class _HomePageState extends State<HomePage> {
             ElevatedButton.icon(
               onPressed: () {
                 Navigator.pop(dialogContext);
+                // ★ [로직 수정] 퀴즈 버튼 클릭 시 바로 캐시 체크
                 _checkSavedQuizAndStart(category, level);
               },
               icon: const Icon(Icons.edit_note_rounded),
@@ -509,58 +442,29 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  // ★ 가장 중요한 로직: 캐시 키를 quiz_match_ 로 통일
   void _checkSavedQuizAndStart(String category, String level) {
     final cacheBox = Hive.box('cache');
-    final String cacheKey = "quiz_general_${category}_${level}";
+    // quiz_page.dart에서 사용하는 키와 동일하게 맞춤
+    final String cacheKey = "quiz_match_${category}_${level}";
 
     if (cacheBox.containsKey(cacheKey)) {
-      _showResumeDialog(category, level);
+      // 기록이 있으면 문제 수 선택창을 건너뛰고 바로 QuizPage로 이동
+      // QuizPage 내부에서 "이어서 푸시겠습니까?" 팝업을 띄우게 됨
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => QuizPage(
+            category: category,
+            level: level,
+            questionCount: 0, // 이어서 풀 때는 0 전달
+          ),
+        ),
+      );
     } else {
+      // 기록이 없으면 문제 수 선택창 노출
       _showQuestionCountDialog(category, level);
     }
-  }
-
-  void _showResumeDialog(String category, String level) {
-    showDialog(
-      context: context,
-      builder: (BuildContext dialogContext) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15),
-          ),
-          title: const Text("퀴즈 이어풀기 💾"),
-          content: const Text("이전에 풀던 문제가 저장되어 있습니다.\n이어서 푸시겠습니까?"),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(dialogContext);
-                _showQuestionCountDialog(category, level);
-              },
-              child: const Text("새로 시작", style: TextStyle(color: Colors.red)),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.pop(dialogContext);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => QuizPage(
-                      category: category,
-                      level: level,
-                      questionCount: 0,
-                    ),
-                  ),
-                );
-              },
-              child: const Text(
-                "이어풀기",
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ),
-          ],
-        );
-      },
-    );
   }
 
   void _showQuestionCountDialog(String category, String level) {
