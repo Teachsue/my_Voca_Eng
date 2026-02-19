@@ -6,15 +6,13 @@ import 'package:intl/intl.dart';
 
 import 'word_model.dart';
 import 'data_loader.dart';
-import 'quiz_page.dart';
-import 'study_page.dart'; // 만약을 위해 남겨둠
 import 'calendar_page.dart';
 import 'study_record_service.dart';
 import 'wrong_answer_page.dart';
 import 'todays_word_list_page.dart';
 import 'level_test_page.dart';
-import 'day_selection_page.dart'; // ★ 추가
-import 'statistics_page.dart'; // ★ 추가
+import 'day_selection_page.dart';
+import 'statistics_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -94,7 +92,6 @@ class _HomePageState extends State<HomePage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // [1] 상단 헤더
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -151,10 +148,8 @@ class _HomePageState extends State<HomePage> {
                 ),
                 const SizedBox(height: 35),
 
-                // [2] 데일리 학습 대시보드
                 Column(
                   children: [
-                    // 오늘의 단어 배너
                     GestureDetector(
                       onTap: () async {
                         await _startTodaysQuiz();
@@ -234,7 +229,6 @@ class _HomePageState extends State<HomePage> {
 
                     const SizedBox(height: 16),
 
-                    // 실력 진단 배너
                     GestureDetector(
                       onTap: () async {
                         final String lastCompletedDate = cacheBox.get(
@@ -340,7 +334,6 @@ class _HomePageState extends State<HomePage> {
                 ),
 
                 const SizedBox(height: 35),
-                // [3] 하단 카테고리
                 const Text(
                   "Study Category",
                   style: TextStyle(
@@ -394,10 +387,9 @@ class _HomePageState extends State<HomePage> {
                         _refresh();
                       },
                     ),
-                    // ★ 변경: 학습 통계 버튼을 누르면 StatisticsPage로 이동하도록 수정
                     _buildMenuCard(
                       title: "학습 통계",
-                      subtitle: "내 실력 한눈에 보기", // 서브타이틀도 "준비중..."에서 멋지게 변경!
+                      subtitle: "내 실력 한눈에 보기",
                       icon: Icons.bar_chart_rounded,
                       color: Colors.purpleAccent,
                       onTap: () async {
@@ -407,7 +399,7 @@ class _HomePageState extends State<HomePage> {
                             builder: (context) => const StatisticsPage(),
                           ),
                         );
-                        _refresh(); // 갔다 오면 상태를 다시 한 번 갱신해 줍니다.
+                        _refresh();
                       },
                     ),
                   ],
@@ -537,142 +529,18 @@ class _HomePageState extends State<HomePage> {
                 ),
                 onTap: () {
                   Navigator.pop(dialogContext);
-                  _showModeSelectionDialog(category, level);
+                  // ★ 핵심: 번거로운 팝업을 거치지 않고 곧바로 DaySelectionPage로 보냅니다!
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) =>
+                          DaySelectionPage(category: category, level: level),
+                    ),
+                  );
                 },
               );
             }).toList(),
           ),
-        );
-      },
-    );
-  }
-
-  void _showModeSelectionDialog(String category, String level) {
-    showDialog(
-      context: context,
-      builder: (BuildContext dialogContext) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
-          ),
-          title: Text(
-            "$category $level",
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
-          content: const Text("어떤 학습을 시작하시겠어요?"),
-          actionsAlignment: MainAxisAlignment.spaceEvenly,
-          actions: [
-            OutlinedButton.icon(
-              onPressed: () {
-                Navigator.pop(dialogContext);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    // ★ 핵심 변경 부분: StudyPage 대신 DaySelectionPage로 이동
-                    builder: (context) =>
-                        DaySelectionPage(category: category, level: level),
-                  ),
-                );
-              },
-              icon: const Icon(Icons.menu_book_rounded, size: 20),
-              label: const Text("단어장"),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: Colors.black87,
-                side: BorderSide(color: Colors.grey.shade300),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 10,
-                ),
-              ),
-            ),
-            ElevatedButton.icon(
-              onPressed: () {
-                Navigator.pop(dialogContext);
-                _checkSavedQuizAndStart(category, level);
-              },
-              icon: const Icon(Icons.edit_note_rounded, size: 20),
-              label: const Text("퀴즈"),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.indigo,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 10,
-                ),
-                elevation: 0,
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void _checkSavedQuizAndStart(String category, String level) {
-    final cacheBox = Hive.box('cache');
-    final String cacheKey = "quiz_match_${category}_${level}";
-
-    if (cacheBox.containsKey(cacheKey)) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) =>
-              QuizPage(category: category, level: level, questionCount: 0),
-        ),
-      );
-    } else {
-      _showQuestionCountDialog(category, level);
-    }
-  }
-
-  void _showQuestionCountDialog(String category, String level) {
-    showDialog(
-      context: context,
-      builder: (BuildContext dialogContext) {
-        return SimpleDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          title: const Text(
-            "문제 수 선택",
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
-          children: [10, 20, 30].map((count) {
-            return SimpleDialogOption(
-              onPressed: () {
-                Navigator.pop(dialogContext);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => QuizPage(
-                      category: category,
-                      level: level,
-                      questionCount: count,
-                    ),
-                  ),
-                );
-              },
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  vertical: 10.0,
-                  horizontal: 8.0,
-                ),
-                child: Text(
-                  "$count문제",
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-            );
-          }).toList(),
         );
       },
     );

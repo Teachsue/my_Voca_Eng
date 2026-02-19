@@ -57,41 +57,128 @@ class _QuizPageState extends State<QuizPage> {
         _showResumeDialog(savedData);
       } else {
         _clearProgress();
-        _loadNewQuizData(widget.questionCount);
+        // 기록이 없는 것과 동일하게 처리
+        if (widget.dayNumber == null && widget.questionCount <= 0) {
+          _showQuestionCountSelection();
+        } else {
+          int count = widget.questionCount > 0 ? widget.questionCount : 10;
+          _loadNewQuizData(count);
+        }
       }
     } else {
-      _loadNewQuizData(widget.questionCount);
+      if (widget.dayNumber == null && widget.questionCount <= 0) {
+        _showQuestionCountSelection();
+      } else {
+        int count = widget.questionCount > 0 ? widget.questionCount : 10;
+        _loadNewQuizData(count);
+      }
     }
   }
 
+  // ★ 변경: 뒤로가기 및 빈 공간 터치를 허용하고, 취소 시 화면을 빠져나가도록 구현
   void _showResumeDialog(dynamic savedData) {
-    showDialog(
+    showDialog<bool>(
       context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        title: const Text("퀴즈 이어 풀기"),
+      barrierDismissible: true, // 바깥을 터치해서 닫을 수 있게 허용
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text(
+          "퀴즈 이어 풀기",
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         content: const Text("이전에 풀던 기록이 있습니다.\n이어서 푸시겠습니까?"),
         actions: [
           TextButton(
             onPressed: () {
               _clearProgress();
-              Navigator.pop(context);
-              int count = widget.questionCount > 0 ? widget.questionCount : 10;
-              _loadNewQuizData(count);
+              Navigator.pop(dialogContext, true); // 정상적으로 선택했음을 true로 알림
+
+              if (widget.dayNumber == null && widget.questionCount <= 0) {
+                _showQuestionCountSelection();
+              } else {
+                int count = widget.questionCount > 0
+                    ? widget.questionCount
+                    : 10;
+                _loadNewQuizData(count);
+              }
             },
-            child: const Text("새로 풀기", style: TextStyle(color: Colors.grey)),
+            child: const Text(
+              "새로 풀기",
+              style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold),
+            ),
           ),
           ElevatedButton(
             onPressed: () {
-              Navigator.pop(context);
+              Navigator.pop(dialogContext, true); // 정상적으로 선택했음을 true로 알림
               _restoreFromCache(savedData);
             },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.indigo),
-            child: const Text("이어서 풀기", style: TextStyle(color: Colors.white)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.indigo,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            child: const Text(
+              "이어서 풀기",
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
         ],
       ),
-    );
+    ).then((handled) {
+      // handled가 null이라는 것은 버튼을 누르지 않고 뒤로가기나 배경을 눌러서 팝업이 꺼졌다는 뜻
+      if (handled == null) {
+        Navigator.pop(context); // 텅 빈 퀴즈 페이지에 남지 않도록 이전 화면으로 완전히 돌아갑니다.
+      }
+    });
+  }
+
+  // ★ 변경: 문제 수 선택 팝업도 동일하게 뒤로가기 로직 적용
+  void _showQuestionCountSelection() {
+    showDialog<bool>(
+      context: context,
+      barrierDismissible: true,
+      builder: (BuildContext dialogContext) {
+        return SimpleDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: const Text(
+            "문제 수 선택",
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+          ),
+          children: [10, 20, 30].map((count) {
+            return SimpleDialogOption(
+              onPressed: () {
+                Navigator.pop(dialogContext, true);
+                _loadNewQuizData(count);
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  vertical: 12.0,
+                  horizontal: 8.0,
+                ),
+                child: Text(
+                  "$count문제",
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+        );
+      },
+    ).then((handled) {
+      // 배경 터치나 뒤로가기를 했을 경우 이전 화면으로 빠져나갑니다.
+      if (handled == null) {
+        Navigator.pop(context);
+      }
+    });
   }
 
   void _restoreFromCache(dynamic savedData) {
@@ -121,8 +208,8 @@ class _QuizPageState extends State<QuizPage> {
         }
       });
     } catch (e) {
-      print("복구 중 에러 발생: $e");
-      _loadNewQuizData(widget.questionCount);
+      int count = widget.questionCount > 0 ? widget.questionCount : 10;
+      _loadNewQuizData(count);
     }
   }
 
@@ -203,27 +290,20 @@ class _QuizPageState extends State<QuizPage> {
     final currentQuestion = _quizData[_currentIndex];
     bool correct = (selectedAnswer == currentQuestion['correctAnswer']);
 
-    // ★ 추가: 정답을 맞힌 경우 "학습 완료(learned_words)" 데이터로 저장
     if (correct) {
       try {
         final cacheBox = Hive.box('cache');
-        // 기존에 학습한 단어 목록을 불러옵니다.
         List<String> learnedWords = List<String>.from(
           cacheBox.get('learned_words', defaultValue: []),
         );
         String spelling = currentQuestion['question'];
 
-        // 중복 방지: 아직 목록에 없는 단어라면 추가합니다.
         if (!learnedWords.contains(spelling)) {
           learnedWords.add(spelling);
           cacheBox.put('learned_words', learnedWords);
         }
-      } catch (e) {
-        print("학습 완료 단어 저장 실패: $e");
-      }
-    }
-    // 오답인 경우 기존 오답 노트에 저장
-    else {
+      } catch (e) {}
+    } else {
       try {
         if (Hive.isBoxOpen('wrong_answers')) {
           final wrongBox = Hive.box<Word>('wrong_answers');
@@ -294,13 +374,23 @@ class _QuizPageState extends State<QuizPage> {
   Widget build(BuildContext context) {
     if (_quizList.isEmpty && _quizData.isEmpty) {
       return Scaffold(
-        appBar: AppBar(title: const Text("퀴즈")),
-        body: const Center(child: Text("해당 레벨에 학습 데이터가 없습니다.")),
+        backgroundColor: const Color(0xFFF5F7FA),
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          foregroundColor: Colors.black,
+          elevation: 0,
+        ),
+        // 팝업이 뜰 때나 데이터 로딩 중 빈 화면 방지용 프로그레스
+        body: const Center(
+          child: CircularProgressIndicator(color: Colors.indigo),
+        ),
       );
     }
 
     if (_quizData.isEmpty) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator(color: Colors.indigo)),
+      );
     }
 
     final currentQuestion = _quizData[_currentIndex];

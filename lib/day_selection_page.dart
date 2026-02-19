@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'word_model.dart';
 import 'study_page.dart';
+import 'quiz_page.dart';
 
 class DaySelectionPage extends StatefulWidget {
   final String category;
@@ -57,6 +58,78 @@ class _DaySelectionPageState extends State<DaySelectionPage> {
     setState(() {});
   }
 
+  // ★ 변경: 비정상적인 캐시(index가 0)일 경우 무시하고 문제 수 팝업 노출
+  void _checkSavedQuizAndStart() {
+    final cacheBox = Hive.box('cache');
+    final String cacheKey = "quiz_match_${widget.category}_${widget.level}";
+    final savedData = cacheBox.get(cacheKey);
+
+    // 기록이 있으면서, 최소 1문제 이상(index > 0) 풀었을 때만 이어풀기로 보냄
+    if (savedData != null && (savedData['index'] ?? 0) > 0) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => QuizPage(
+            category: widget.category,
+            level: widget.level,
+            questionCount: 0,
+          ),
+        ),
+      );
+    } else {
+      // 찌꺼기 기록 삭제 후 문제 수 선택 창 띄우기
+      cacheBox.delete(cacheKey);
+      _showQuestionCountDialog();
+    }
+  }
+
+  void _showQuestionCountDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return SimpleDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: const Text(
+            "문제 수 선택",
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          children: [10, 20, 30].map((count) {
+            return SimpleDialogOption(
+              onPressed: () {
+                Navigator.pop(dialogContext);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => QuizPage(
+                      category: widget.category,
+                      level: widget.level,
+                      questionCount: count,
+                    ),
+                  ),
+                );
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  vertical: 10.0,
+                  horizontal: 8.0,
+                ),
+                child: Text(
+                  "$count문제",
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_dayChunks.isEmpty) {
@@ -82,8 +155,50 @@ class _DaySelectionPageState extends State<DaySelectionPage> {
           mainAxisSpacing: 15,
           childAspectRatio: 1.0,
         ),
-        itemCount: _dayChunks.length,
+        itemCount: _dayChunks.length + 1,
         itemBuilder: (context, index) {
+          if (index == _dayChunks.length) {
+            return GestureDetector(
+              onTap: _checkSavedQuizAndStart,
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF5B86E5), Color(0xFF36D1DC)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF5B86E5).withOpacity(0.3),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: const Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.psychology_alt_rounded,
+                      color: Colors.white,
+                      size: 32,
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      "랜덤 퀴즈",
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
+
           final int dayNumber = index + 1;
           final int wordCount = _dayChunks[index].length;
 
@@ -95,7 +210,6 @@ class _DaySelectionPageState extends State<DaySelectionPage> {
                   builder: (context) => StudyPage(
                     category: widget.category,
                     level: widget.level,
-                    // ★ 변경: 전체 청크와 현재 클릭한 인덱스를 전달
                     allDayChunks: _dayChunks,
                     initialDayIndex: index,
                   ),
