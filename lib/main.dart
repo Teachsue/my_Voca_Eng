@@ -69,6 +69,132 @@ class _HomePageState extends State<HomePage> {
     if (mounted) setState(() {});
   }
 
+  // ★ 추가: 레벨 테스트 안내 다이얼로그 함수
+  void _showLevelTestGuide(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: true, // 배경 터치 시 닫기 허용
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(25),
+          ),
+          title: const Column(
+            children: [
+              Icon(
+                Icons.psychology_alt_rounded,
+                color: Colors.indigo,
+                size: 50,
+              ),
+              SizedBox(height: 15),
+              Text(
+                "실력 진단 테스트 안내",
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+              ),
+            ],
+          ),
+          content: const Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                "내 실력에 딱 맞는 단어장을 추천해 드릴게요!",
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.indigo,
+                ),
+              ),
+              SizedBox(height: 20),
+              // 안내 사항 리스트
+              Row(
+                children: [
+                  Icon(
+                    Icons.check_circle_outline,
+                    size: 18,
+                    color: Colors.grey,
+                  ),
+                  SizedBox(width: 10),
+                  Expanded(child: Text("총 15개 문항 (레벨별 5문제)")),
+                ],
+              ),
+              SizedBox(height: 8),
+              Row(
+                children: [
+                  Icon(Icons.timer_outlined, size: 18, color: Colors.grey),
+                  SizedBox(width: 10),
+                  Expanded(child: Text("예상 소요 시간: 약 3분")),
+                ],
+              ),
+              SizedBox(height: 8),
+              Row(
+                children: [
+                  Icon(
+                    Icons.auto_awesome_rounded,
+                    size: 18,
+                    color: Colors.grey,
+                  ),
+                  SizedBox(width: 10),
+                  Expanded(child: Text("분석 결과에 따른 맞춤 레벨 배정")),
+                ],
+              ),
+            ],
+          ),
+          actionsPadding: const EdgeInsets.fromLTRB(20, 0, 20, 25),
+          actions: [
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.pop(dialogContext),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 15),
+                      side: BorderSide(color: Colors.grey.shade300),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      "다음에 할게요",
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      Navigator.pop(dialogContext); // 팝업 닫기
+                      await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const LevelTestPage(),
+                        ),
+                      );
+                      _refresh(); // 테스트 마치고 돌아오면 홈 화면 갱신
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.indigo,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 15),
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      "시험 시작하기!",
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final cacheBox = Hive.box('cache');
@@ -233,27 +359,21 @@ class _HomePageState extends State<HomePage> {
                     // ★ 변경: 실력 진단 / 맞춤 학습 배너
                     GestureDetector(
                       onTap: () async {
-                        // 결과가 이미 있다면 해당 레벨 단어장으로 직행!
+                        // 1. 이미 테스트 결과가 있는 경우: 바로 맞춤 학습으로 이동
                         if (recommendedLevel != null) {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
                               builder: (context) => DaySelectionPage(
-                                category: 'TOEIC', // 현재 레벨 테스트는 TOEIC 기준
+                                category: 'TOEIC',
                                 level: recommendedLevel,
                               ),
                             ),
                           );
                         }
-                        // 결과가 없다면 레벨 테스트 응시 창으로 이동
+                        // 2. 결과가 없는 경우: 안내 팝업창 띄우기
                         else {
-                          await Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const LevelTestPage(),
-                            ),
-                          );
-                          _refresh(); // 다녀오면 결과 갱신
+                          _showLevelTestGuide(context);
                         }
                       },
                       child: Container(
