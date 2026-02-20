@@ -4,31 +4,39 @@ import 'package:hive/hive.dart';
 import 'word_model.dart';
 
 class DataLoader {
-  // 메인 함수: 앱 켜질 때 호출됨
+  // ★ 중요: 단어 데이터를 수정할 때마다 이 숫자를 1씩 올려주세요! (예: 1 -> 2 -> 3)
+  static const int DATA_VERSION = 1;
+
   static Future<void> loadData() async {
-    final box = Hive.box<Word>('words');
+    final wordBox = Hive.box<Word>('words');
+    final cacheBox = Hive.box('cache'); // 버전 정보를 저장할 박스
 
-    // 1. 이미 데이터가 있으면 로딩하지 않음 (중복 방지)
-    // 개발 중에는 데이터를 싹 지우고 다시 로딩하고 싶을 때 아래 주석을 풀고 실행하세요.
-    // await box.clear();
+    // 저장된 버전 확인 (없으면 0)
+    int savedVersion = cacheBox.get('data_version', defaultValue: 0);
 
-    if (box.isNotEmpty) {
-      print("이미 데이터가 있습니다. 로딩 건너뜀.");
-      return;
+    // 1. 데이터가 아예 없거나(초기 설치), 버전이 올라갔으면(업데이트) 데이터를 다시 로드함
+    if (wordBox.isEmpty || savedVersion < DATA_VERSION) {
+      print("데이터 업데이트 필요 (구버전: $savedVersion -> 신버전: $DATA_VERSION)");
+
+      // 기존 데이터 싹 비우기 (중복 방지)
+      await wordBox.clear();
+      print("기존 데이터 삭제 완료.");
+
+      // 2. 단어 파일 읽기
+      await _loadFromFile(wordBox, 'assets/json/word_data.json');
+
+      // 3. 퀴즈 파일 읽기
+      await _loadFromFile(wordBox, 'assets/json/quiz_data.json');
+
+      // 4. 최신 버전 정보 저장
+      await cacheBox.put('data_version', DATA_VERSION);
+      print("모든 데이터 로딩 및 버전 업데이트 완료! 총 ${wordBox.length}개");
+    } else {
+      print("최신 데이터가 이미 있습니다. (버전: $savedVersion). 로딩 건너뜀.");
     }
-
-    print("데이터 로딩 시작...");
-
-    // 2. 단어 파일 읽기 (word_data.json)
-    await _loadFromFile(box, 'assets/json/word_data.json');
-
-    // 3. 퀴즈 파일 읽기 (quiz_data.json)
-    await _loadFromFile(box, 'assets/json/quiz_data.json');
-
-    print("모든 데이터 로딩 완료! 총 ${box.length}개");
   }
 
-  // 내부 함수: 파일 하나를 읽어서 DB에 넣는 기계
+  // 내부 함수
   static Future<void> _loadFromFile(Box<Word> box, String filePath) async {
     try {
       final String jsonString = await rootBundle.loadString(filePath);
@@ -40,14 +48,12 @@ class DataLoader {
           level: item['level'] ?? 'Basic',
           spelling: item['spelling'] ?? '',
           meaning: item['meaning'] ?? '',
-          type: item['type'] ?? 'Word', // JSON에 적힌 타입 그대로 사용
-          // 퀴즈용 데이터 처리
+          type: item['type'] ?? 'Word',
           correctAnswer: item['correctAnswer'],
           options: item['options'] != null
               ? List<String>.from(item['options'])
               : null,
           explanation: item['explanation'],
-
           nextReviewDate: DateTime.now(),
         );
         await box.add(word);
@@ -55,7 +61,6 @@ class DataLoader {
       print("-> $filePath 로딩 성공 (${jsonList.length}개)");
     } catch (e) {
       print("-> $filePath 로딩 실패: $e");
-      // 파일이 없거나 오타가 있어도 앱이 꺼지지 않게 방지
     }
   }
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
+import 'package:intl/intl.dart'; // 요일 포맷팅을 위해 추가
 import 'study_record_service.dart';
 
 class CalendarPage extends StatefulWidget {
@@ -68,6 +69,11 @@ class _CalendarPageState extends State<CalendarPage>
               firstDay: DateTime.utc(2020, 1, 1),
               lastDay: DateTime.utc(2030, 12, 31),
               focusedDay: _focusedDay,
+
+              // 요일 부분이 잘리지 않도록 높이 넉넉하게 유지
+              daysOfWeekHeight: 30,
+
+              // ★ 변경 1: 기존의 daysOfWeekStyle은 지웠습니다! (전체 빨간색 방지)
               headerStyle: const HeaderStyle(
                 formatButtonVisible: false,
                 titleCentered: true,
@@ -75,6 +81,7 @@ class _CalendarPageState extends State<CalendarPage>
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                 ),
+                headerMargin: EdgeInsets.only(bottom: 15),
               ),
 
               selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
@@ -92,17 +99,53 @@ class _CalendarPageState extends State<CalendarPage>
                 return [];
               },
 
-              // ★ 도장 위치 및 디자인 수정 ★
               calendarBuilders: CalendarBuilders(
-                // markerBuilder에서 도장과 숫자를 Stack으로 겹쳐서 중앙에 배치합니다.
+                // ★ 변경 2: 요일 헤더 커스텀 (토요일 파랑, 일요일 빨강 지정)
+                dowBuilder: (context, day) {
+                  if (day.weekday == DateTime.sunday) {
+                    return const Center(
+                      child: Text(
+                        '일',
+                        style: TextStyle(
+                          color: Colors.redAccent,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                    );
+                  } else if (day.weekday == DateTime.saturday) {
+                    return const Center(
+                      child: Text(
+                        '토',
+                        style: TextStyle(
+                          color: Colors.blueAccent,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                    );
+                  }
+                  // 평일 (월~금)
+                  final text = DateFormat.E('ko_KR').format(day);
+                  return Center(
+                    child: Text(
+                      text,
+                      style: const TextStyle(
+                        color: Colors.black87,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                  );
+                },
+
                 markerBuilder: (context, date, events) {
                   if (!_isControllerInitialized || events.isEmpty) return null;
 
                   return Center(
                     child: Stack(
-                      alignment: Alignment.center, // 자식들을 정중앙에 겹침
+                      alignment: Alignment.center,
                       children: [
-                        // 1. 하단 레이어: 별 도장 애니메이션
                         ScaleTransition(
                           scale: CurvedAnimation(
                             parent: _animationController,
@@ -122,12 +165,10 @@ class _CalendarPageState extends State<CalendarPage>
                             ),
                           ),
                         ),
-                        // 2. 상단 레이어: 날짜 숫자
-                        // (Stack에서 나중에 쓴 위젯이 위로 올라옵니다.)
                         Text(
                           "${date.day}",
                           style: const TextStyle(
-                            color: Colors.brown, // 도장 위에서 잘 보이는 색상
+                            color: Colors.brown,
                             fontWeight: FontWeight.bold,
                             fontSize: 13,
                           ),
@@ -137,8 +178,25 @@ class _CalendarPageState extends State<CalendarPage>
                   );
                 },
 
-                // defaultBuilder와 prioritiyBuilder 등은 markerBuilder가
-                // 해당 칸을 덮어쓰므로 따로 구현하지 않아도 됩니다.
+                // ★ 변경 3: 실제 날짜 숫자들 커스텀 (숫자도 주말 색상 통일)
+                defaultBuilder: (context, day, focusedDay) {
+                  if (day.weekday == DateTime.sunday) {
+                    return Center(
+                      child: Text(
+                        '${day.day}',
+                        style: const TextStyle(color: Colors.redAccent),
+                      ),
+                    );
+                  } else if (day.weekday == DateTime.saturday) {
+                    return Center(
+                      child: Text(
+                        '${day.day}',
+                        style: const TextStyle(color: Colors.blueAccent),
+                      ),
+                    );
+                  }
+                  return null;
+                },
               ),
 
               calendarStyle: const CalendarStyle(
@@ -162,7 +220,6 @@ class _CalendarPageState extends State<CalendarPage>
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Column(
                 children: [
-                  // 총 공부 일수 표시
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.symmetric(vertical: 20),
@@ -190,7 +247,6 @@ class _CalendarPageState extends State<CalendarPage>
                   ),
                   const SizedBox(height: 16),
 
-                  // 오늘 완료 여부 배너
                   isTodayDone ? _buildSuccessBanner() : _buildPendingBanner(),
                 ],
               ),

@@ -69,11 +69,10 @@ class _HomePageState extends State<HomePage> {
     if (mounted) setState(() {});
   }
 
-  // ★ 추가: 레벨 테스트 안내 다이얼로그 함수
   void _showLevelTestGuide(BuildContext context) {
     showDialog(
       context: context,
-      barrierDismissible: true, // 배경 터치 시 닫기 허용
+      barrierDismissible: true,
       builder: (BuildContext dialogContext) {
         return AlertDialog(
           shape: RoundedRectangleBorder(
@@ -105,7 +104,6 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
               SizedBox(height: 20),
-              // 안내 사항 리스트
               Row(
                 children: [
                   Icon(
@@ -163,14 +161,14 @@ class _HomePageState extends State<HomePage> {
                 Expanded(
                   child: ElevatedButton(
                     onPressed: () async {
-                      Navigator.pop(dialogContext); // 팝업 닫기
+                      Navigator.pop(dialogContext);
                       await Navigator.push(
                         context,
                         MaterialPageRoute(
                           builder: (context) => const LevelTestPage(),
                         ),
                       );
-                      _refresh(); // 테스트 마치고 돌아오면 홈 화면 갱신
+                      _refresh();
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.indigo,
@@ -207,13 +205,22 @@ class _HomePageState extends State<HomePage> {
 
     String? recommendedLevel = cacheBox.get('user_recommended_level');
 
+    // ★ 화면 크기에 맞추기 위한 반응형 레이아웃
+    // 화면이 유독 작은 폰이라면 스크롤을 허용하고, 일반 폰이면 한 화면에 꽉 차게 합니다.
+    final screenHeight = MediaQuery.of(context).size.height;
+    final isSmallScreen = screenHeight < 750;
+
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
+          physics: isSmallScreen
+              ? const AlwaysScrollableScrollPhysics()
+              : const NeverScrollableScrollPhysics(),
           child: Padding(
+            // ★ 위아래 여백 축소
             padding: const EdgeInsets.symmetric(
               horizontal: 24.0,
-              vertical: 20.0,
+              vertical: 15.0,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -227,16 +234,16 @@ class _HomePageState extends State<HomePage> {
                         Text(
                           "안녕하세요! 👋",
                           style: TextStyle(
-                            fontSize: 15,
+                            fontSize: 14, // 폰트 미세 조정
                             color: Colors.grey[600],
                             fontWeight: FontWeight.w500,
                           ),
                         ),
-                        const SizedBox(height: 6),
+                        const SizedBox(height: 4),
                         const Text(
                           "오늘도 열공해볼까요?",
                           style: TextStyle(
-                            fontSize: 24,
+                            fontSize: 22, // 폰트 미세 조정
                             fontWeight: FontWeight.bold,
                             color: Colors.black87,
                             letterSpacing: -0.5,
@@ -251,7 +258,7 @@ class _HomePageState extends State<HomePage> {
                         boxShadow: [
                           BoxShadow(
                             color: Colors.grey.withOpacity(0.15),
-                            blurRadius: 15,
+                            blurRadius: 10,
                             spreadRadius: 2,
                             offset: const Offset(0, 4),
                           ),
@@ -272,7 +279,9 @@ class _HomePageState extends State<HomePage> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 35),
+
+                // ★ 간격 축소 (35 -> 25)
+                const SizedBox(height: 25),
 
                 Column(
                   children: [
@@ -284,7 +293,8 @@ class _HomePageState extends State<HomePage> {
                       },
                       child: Container(
                         width: double.infinity,
-                        padding: const EdgeInsets.all(24),
+                        // ★ 내부 패딩 축소 (24 -> 20)
+                        padding: const EdgeInsets.all(20),
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
                             colors: isCompleted
@@ -296,14 +306,14 @@ class _HomePageState extends State<HomePage> {
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                           ),
-                          borderRadius: BorderRadius.circular(24),
+                          borderRadius: BorderRadius.circular(20),
                           boxShadow: [
                             BoxShadow(
                               color: isCompleted
                                   ? Colors.grey.withOpacity(0.3)
                                   : const Color(0xFF5B86E5).withOpacity(0.35),
-                              blurRadius: 15,
-                              offset: const Offset(0, 8),
+                              blurRadius: 10,
+                              offset: const Offset(0, 6),
                             ),
                           ],
                         ),
@@ -317,26 +327,26 @@ class _HomePageState extends State<HomePage> {
                                     isCompleted ? "오늘의 학습 완료! ✅" : "오늘의 영단어 🔥",
                                     style: const TextStyle(
                                       color: Colors.white,
-                                      fontSize: 20,
+                                      fontSize: 18, // 폰트 축소
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
-                                  const SizedBox(height: 10),
+                                  const SizedBox(height: 8),
                                   Text(
                                     isCompleted
                                         ? "훌륭합니다! 내일 다시 만나요.\n복습은 언제나 환영이에요."
                                         : "매일 10개씩 꾸준히!\n지금 바로 시작하세요.",
                                     style: TextStyle(
                                       color: Colors.white.withOpacity(0.9),
-                                      fontSize: 14,
-                                      height: 1.5,
+                                      fontSize: 13, // 폰트 축소
+                                      height: 1.4,
                                     ),
                                   ),
                                 ],
                               ),
                             ),
                             Container(
-                              padding: const EdgeInsets.all(12),
+                              padding: const EdgeInsets.all(10),
                               decoration: BoxDecoration(
                                 color: Colors.white.withOpacity(0.2),
                                 shape: BoxShape.circle,
@@ -346,7 +356,7 @@ class _HomePageState extends State<HomePage> {
                                     ? Icons.check_rounded
                                     : Icons.play_arrow_rounded,
                                 color: Colors.white,
-                                size: 32,
+                                size: 28,
                               ),
                             ),
                           ],
@@ -354,12 +364,12 @@ class _HomePageState extends State<HomePage> {
                       ),
                     ),
 
-                    const SizedBox(height: 16),
+                    // ★ 간격 축소 (16 -> 12)
+                    const SizedBox(height: 12),
 
-                    // ★ 변경: 실력 진단 / 맞춤 학습 배너
+                    // 실력 진단 / 맞춤 학습 배너
                     GestureDetector(
                       onTap: () async {
-                        // 1. 이미 테스트 결과가 있는 경우: 바로 맞춤 학습으로 이동
                         if (recommendedLevel != null) {
                           Navigator.push(
                             context,
@@ -370,17 +380,16 @@ class _HomePageState extends State<HomePage> {
                               ),
                             ),
                           );
-                        }
-                        // 2. 결과가 없는 경우: 안내 팝업창 띄우기
-                        else {
+                        } else {
                           _showLevelTestGuide(context);
                         }
                       },
                       child: Container(
                         width: double.infinity,
+                        // ★ 세로 패딩 축소
                         padding: const EdgeInsets.symmetric(
                           horizontal: 20,
-                          vertical: 18,
+                          vertical: 16,
                         ),
                         decoration: BoxDecoration(
                           color: Colors.white,
@@ -388,8 +397,8 @@ class _HomePageState extends State<HomePage> {
                           boxShadow: [
                             BoxShadow(
                               color: Colors.grey.withOpacity(0.08),
-                              blurRadius: 15,
-                              offset: const Offset(0, 5),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
                             ),
                           ],
                         ),
@@ -406,10 +415,10 @@ class _HomePageState extends State<HomePage> {
                                     ? Icons.auto_awesome_rounded
                                     : Icons.psychology_alt_rounded,
                                 color: Colors.indigo,
-                                size: 26,
+                                size: 24,
                               ),
                             ),
-                            const SizedBox(width: 16),
+                            const SizedBox(width: 14),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -419,7 +428,7 @@ class _HomePageState extends State<HomePage> {
                                         ? "내 실력에 맞는 맞춤 학습"
                                         : "내 진짜 실력은 어느 정도일까?",
                                     style: const TextStyle(
-                                      fontSize: 15,
+                                      fontSize: 14,
                                       fontWeight: FontWeight.bold,
                                       color: Colors.black87,
                                     ),
@@ -427,17 +436,17 @@ class _HomePageState extends State<HomePage> {
                                   const SizedBox(height: 4),
                                   Text(
                                     recommendedLevel != null
-                                        ? "💡 추천 레벨: TOEIC $recommendedLevel\n터치하면 해당 단어장으로 이동해요!"
+                                        ? "💡 추천: TOEIC $recommendedLevel\n터치하여 단어장으로 이동!"
                                         : "딱 3분! 실력 진단 테스트 시작하기",
                                     style: TextStyle(
-                                      fontSize: 13,
+                                      fontSize: 12,
                                       color: recommendedLevel != null
                                           ? Colors.indigo[600]
                                           : Colors.grey[500],
                                       fontWeight: recommendedLevel != null
                                           ? FontWeight.w600
                                           : FontWeight.w500,
-                                      height: 1.4,
+                                      height: 1.3,
                                     ),
                                   ),
                                 ],
@@ -446,7 +455,7 @@ class _HomePageState extends State<HomePage> {
                             Icon(
                               Icons.chevron_right_rounded,
                               color: Colors.grey[400],
-                              size: 24,
+                              size: 22,
                             ),
                           ],
                         ),
@@ -455,24 +464,28 @@ class _HomePageState extends State<HomePage> {
                   ],
                 ),
 
-                const SizedBox(height: 35),
+                // ★ 간격 축소 (35 -> 25)
+                const SizedBox(height: 25),
                 const Text(
                   "Study Category",
                   style: TextStyle(
-                    fontSize: 18,
+                    fontSize: 16, // 폰트 축소
                     fontWeight: FontWeight.bold,
                     color: Colors.black87,
                   ),
                 ),
-                const SizedBox(height: 16),
+                // ★ 간격 축소 (16 -> 12)
+                const SizedBox(height: 12),
 
                 GridView.count(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
                   crossAxisCount: 2,
-                  crossAxisSpacing: 16,
-                  mainAxisSpacing: 16,
-                  childAspectRatio: 1.05,
+                  // ★ 그리드 간격 축소 (16 -> 12)
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
+                  // ★ 핵심: AspectRatio를 넓혀서(1.05 -> 1.30) 세로 높이를 확 줄임
+                  childAspectRatio: 1.30,
                   children: [
                     _buildMenuCard(
                       title: "TOEIC",
@@ -526,7 +539,6 @@ class _HomePageState extends State<HomePage> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 20),
               ],
             ),
           ),
@@ -547,11 +559,11 @@ class _HomePageState extends State<HomePage> {
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(20), // 테두리 곡률 미세 축소
           boxShadow: [
             BoxShadow(
               color: Colors.grey.withOpacity(0.06),
-              blurRadius: 15,
+              blurRadius: 10,
               spreadRadius: 2,
               offset: const Offset(0, 4),
             ),
@@ -561,22 +573,25 @@ class _HomePageState extends State<HomePage> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(12), // 패딩 축소
               decoration: BoxDecoration(
                 color: color.withOpacity(0.08),
                 shape: BoxShape.circle,
               ),
-              child: Icon(icon, color: color, size: 32),
+              child: Icon(icon, color: color, size: 26), // 아이콘 크기 축소
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 10),
             Text(
               title,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+              ), // 폰트 축소
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 2),
             Text(
               subtitle,
-              style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+              style: TextStyle(fontSize: 11, color: Colors.grey[500]), // 폰트 축소
             ),
           ],
         ),
