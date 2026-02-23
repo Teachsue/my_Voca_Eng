@@ -72,6 +72,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
           ),
           content: const Text(
             "기존 레벨 테스트 결과가 삭제되며\n메인 화면에서 다시 응시할 수 있습니다.\n진행하시겠습니까?",
+            style: TextStyle(height: 1.5),
           ),
           actions: [
             TextButton(
@@ -102,6 +103,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
                 ),
+                elevation: 0,
               ),
               child: const Text(
                 "초기화",
@@ -155,20 +157,16 @@ class _StatisticsPageState extends State<StatisticsPage> {
             ),
             ElevatedButton(
               onPressed: () async {
-                // 1. 오답 노트 비우기
                 if (Hive.isBoxOpen('wrong_answers')) {
                   await Hive.box<Word>('wrong_answers').clear();
                 }
 
-                // 2. 캐시 데이터 비우기 (학습 기록, 레벨테스트 결과, 진행상황 등 전부 날아감)
                 await Hive.box('cache').clear();
 
-                // ★ 3. 캘린더 학습 기록 비우기 (StudyRecordService에서 사용하는 박스)
                 try {
                   if (Hive.isBoxOpen('study_records')) {
                     await Hive.box('study_records').clear();
                   } else {
-                    // 혹시 박스가 닫혀있다면 열어서 지우기
                     final recordBox = await Hive.openBox('study_records');
                     await recordBox.clear();
                   }
@@ -176,7 +174,6 @@ class _StatisticsPageState extends State<StatisticsPage> {
                   print("캘린더 데이터 초기화 실패: $e");
                 }
 
-                // 4. 현재 화면의 상태 업데이트
                 setState(() {
                   _wrongAnswersCount = 0;
                   _learnedWordsCount = 0;
@@ -185,7 +182,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
                 });
 
                 if (!mounted) return;
-                Navigator.pop(dialogContext); // 팝업 닫기
+                Navigator.pop(dialogContext);
 
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
@@ -200,6 +197,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
                 ),
+                elevation: 0,
               ),
               child: const Text(
                 "전체 초기화",
@@ -227,11 +225,12 @@ class _StatisticsPageState extends State<StatisticsPage> {
       appBar: AppBar(
         title: const Text(
           "학습 통계 및 설정 📊",
-          style: TextStyle(fontWeight: FontWeight.bold),
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
         ),
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 0,
+        centerTitle: true,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
@@ -241,13 +240,14 @@ class _StatisticsPageState extends State<StatisticsPage> {
             const Text(
               "나의 학습 현황",
               style: TextStyle(
-                fontSize: 22,
+                fontSize: 20,
                 fontWeight: FontWeight.bold,
                 color: Colors.black87,
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
 
+            // 상단 2분할 카드
             IntrinsicHeight(
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -276,22 +276,23 @@ class _StatisticsPageState extends State<StatisticsPage> {
                 ],
               ),
             ),
-            const SizedBox(height: 15),
+            const SizedBox(height: 16),
 
-            _buildWideStatCard(
-              title: "전체 학습 진도율 ($percentString%)",
-              subtitle: "퀴즈에서 한 번 이상 정답을 맞춘 단어의 비율입니다. 꾸준히 게이지를 채워보세요!",
-              value: "$_learnedWordsCount / $_totalWordsCount",
+            // 진도율 및 오답노트 카드 (UI 개선 적용)
+            _buildProgressCard(
+              title: "전체 학습 진도율",
+              subtitle: "학습한 단어: $_learnedWordsCount / 총 $_totalWordsCount단어",
+              valueText: "$percentString%",
               icon: Icons.trending_up_rounded,
               color: Colors.blueAccent,
               progressValue: progressRatio,
             ),
-            const SizedBox(height: 15),
+            const SizedBox(height: 16),
 
-            _buildWideStatCard(
-              title: "현재 복습이 필요한 단어",
-              subtitle: "오답 노트에 쌓인 단어 수입니다. 틈틈이 복습해주세요!",
-              value: "$_wrongAnswersCount개",
+            _buildProgressCard(
+              title: "복습이 필요한 단어",
+              subtitle: "오답 노트에 쌓인 단어를 틈틈이 복습하세요!",
+              valueText: "$_wrongAnswersCount개",
               icon: Icons.note_alt_rounded,
               color: Colors.redAccent,
               progressValue: _totalWordsCount > 0
@@ -301,70 +302,65 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
             const SizedBox(height: 40),
 
+            // 데이터 관리 영역 (설정 메뉴 스타일로 개선)
             const Text(
               "데이터 관리",
               style: TextStyle(
-                fontSize: 16,
+                fontSize: 18,
                 fontWeight: FontWeight.bold,
                 color: Colors.black87,
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
 
-            SizedBox(
-              width: double.infinity,
-              height: 55,
-              child: OutlinedButton.icon(
-                onPressed: _recommendedLevel != "미응시" ? _resetLevelTest : null,
-                icon: const Icon(Icons.refresh_rounded),
-                label: const Text(
-                  "레벨 테스트 초기화",
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.grey[700],
-                  side: BorderSide(color: Colors.grey.shade300, width: 1.5),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(15),
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.grey.withOpacity(0.06),
+                    blurRadius: 15,
+                    spreadRadius: 2,
+                    offset: const Offset(0, 4),
                   ),
-                ),
+                ],
+              ),
+              child: Column(
+                children: [
+                  _buildSettingsTile(
+                    title: "레벨 테스트 초기화",
+                    subtitle: "다시 실력을 진단받고 싶을 때 사용하세요",
+                    icon: Icons.refresh_rounded,
+                    iconColor: Colors.blueGrey,
+                    onTap: _recommendedLevel != "미응시" ? _resetLevelTest : null,
+                  ),
+                  Divider(
+                    height: 1,
+                    color: Colors.grey.shade100,
+                    indent: 20,
+                    endIndent: 20,
+                  ),
+                  _buildSettingsTile(
+                    title: "모든 학습 기록 초기화",
+                    subtitle: "데이터를 완전히 지우고 처음부터 시작합니다",
+                    icon: Icons.delete_forever_rounded,
+                    iconColor: Colors.redAccent,
+                    textColor: Colors.redAccent,
+                    onTap: _resetAllRecords,
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 12),
-
-            SizedBox(
-              width: double.infinity,
-              height: 55,
-              child: OutlinedButton.icon(
-                onPressed: _resetAllRecords,
-                icon: const Icon(Icons.delete_forever_rounded),
-                label: const Text(
-                  "모든 학습 기록 초기화",
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.redAccent,
-                  backgroundColor: Colors.red[50],
-                  side: BorderSide(
-                    color: Colors.redAccent.withOpacity(0.5),
-                    width: 1.5,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(15),
-                  ),
-                  elevation: 0,
-                ),
-              ),
-            ),
-            const SizedBox(height: 30),
+            const SizedBox(height: 40),
 
             Center(
               child: Text(
                 "꾸준함이 실력을 만듭니다!\n오늘도 파이팅하세요 🔥",
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontSize: 15,
-                  color: Colors.grey[500],
+                  fontSize: 14,
+                  color: Colors.grey[400],
                   height: 1.5,
                 ),
               ),
@@ -376,6 +372,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
     );
   }
 
+  // 상단 작은 네모 카드
   Widget _buildStatCard({
     required String title,
     required String value,
@@ -429,7 +426,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
             child: Text(
               value,
               style: const TextStyle(
-                fontSize: 20,
+                fontSize: 18,
                 fontWeight: FontWeight.bold,
                 color: Colors.black87,
               ),
@@ -440,10 +437,11 @@ class _StatisticsPageState extends State<StatisticsPage> {
     );
   }
 
-  Widget _buildWideStatCard({
+  // ★ 변경됨: 진도율 / 오답노트 전용 세련된 프로그레스 카드
+  Widget _buildProgressCard({
     required String title,
     required String subtitle,
-    required String value,
+    required String valueText,
     required IconData icon,
     required Color color,
     required double progressValue,
@@ -466,15 +464,81 @@ class _StatisticsPageState extends State<StatisticsPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
                   color: color.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(14),
+                  shape: BoxShape.circle,
                 ),
-                child: Icon(icon, color: color, size: 26),
+                child: Icon(icon, color: color, size: 22),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
+              ),
+              Text(
+                valueText,
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w900,
+                  color: color,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            subtitle,
+            style: TextStyle(fontSize: 13, color: Colors.grey[500]),
+          ),
+          const SizedBox(height: 16),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: LinearProgressIndicator(
+              value: progressValue.clamp(0.0, 1.0),
+              minHeight: 8,
+              backgroundColor: color.withOpacity(0.1),
+              valueColor: AlwaysStoppedAnimation<Color>(color),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ★ 추가됨: 데이터 관리 버튼들을 위한 리스트 타일 위젯
+  Widget _buildSettingsTile({
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required Color iconColor,
+    Color textColor = Colors.black87,
+    VoidCallback? onTap,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: iconColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: iconColor, size: 22),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -483,45 +547,28 @@ class _StatisticsPageState extends State<StatisticsPage> {
                   children: [
                     Text(
                       title,
-                      style: const TextStyle(
-                        fontSize: 16,
+                      style: TextStyle(
+                        fontSize: 15,
                         fontWeight: FontWeight.bold,
-                        color: Colors.black87,
+                        color: onTap == null ? Colors.grey : textColor,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       subtitle,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[500],
-                        height: 1.4,
-                      ),
+                      style: TextStyle(fontSize: 12, color: Colors.grey[500]),
                     ),
                   ],
                 ),
               ),
-              Text(
-                value,
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: color,
-                ),
+              Icon(
+                Icons.chevron_right_rounded,
+                color: onTap == null ? Colors.transparent : Colors.grey[400],
+                size: 20,
               ),
             ],
           ),
-          const SizedBox(height: 20),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(10),
-            child: LinearProgressIndicator(
-              value: progressValue.clamp(0.0, 1.0),
-              minHeight: 8,
-              backgroundColor: Colors.grey[100],
-              valueColor: AlwaysStoppedAnimation<Color>(color),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
