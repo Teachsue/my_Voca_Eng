@@ -28,13 +28,32 @@ void main() async {
     Hive.registerAdapter(WordAdapter());
   }
 
-  await Hive.openBox<Word>('words');
-  await Hive.openBox('cache');
-  await Hive.openBox<Word>('wrong_answers');
+  // ★★★ 여기가 핵심입니다! (에러 방지 쉴드 장착) ★★★
+  try {
+    await Hive.openBox<Word>('words');
+  } catch (e) {
+    print("⚠️ words DB 충돌 감지! 기존 데이터 삭제 후 초기화 진행...");
+    await Hive.deleteBoxFromDisk('words');
+    await Hive.openBox<Word>('words');
+  }
+
+  try {
+    await Hive.openBox('cache');
+  } catch (e) {
+    await Hive.deleteBoxFromDisk('cache');
+    await Hive.openBox('cache');
+  }
+
+  try {
+    await Hive.openBox<Word>('wrong_answers');
+  } catch (e) {
+    await Hive.deleteBoxFromDisk('wrong_answers');
+    await Hive.openBox<Word>('wrong_answers');
+  }
 
   await StudyRecordService.init();
   await initializeDateFormatting();
-  await DataLoader.loadData();
+  await DataLoader.loadData(); // 기존 데이터가 날아갔다면 여기서 다시 1940개를 채워줍니다.
 
   runApp(const MyApp());
 }

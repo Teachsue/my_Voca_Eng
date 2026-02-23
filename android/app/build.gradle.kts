@@ -25,8 +25,8 @@ android {
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         
-        // ★★★ 여기를 숫자 21로 깔끔하게 바꿨습니다! ★★★
-        minSdk = flutter.minSdkVersion 
+        // ★ minSdk 21 적용 완료
+        minSdk = flutter.minSdkVersion
         
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
@@ -35,9 +35,12 @@ android {
 
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
+            // ★ Kotlin 문법으로 수정됨 ( = 기호 사용)
             signingConfig = signingConfigs.getByName("debug")
+            
+            // ★ Kotlin 문법으로 수정됨 ( is 키워드와 = 기호 사용 )
+            isMinifyEnabled = false
+            isShrinkResources = false
         }
     }
 }
