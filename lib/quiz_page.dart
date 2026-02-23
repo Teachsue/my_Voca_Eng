@@ -315,6 +315,7 @@ class _QuizPageState extends State<QuizPage> {
             type: 'Word',
             spelling: originWord.spelling,
             meaning: originWord.meaning,
+            nextReviewDate: DateTime.now(),
           );
           wrongBox.put(wordToSave.spelling, wordToSave);
         }

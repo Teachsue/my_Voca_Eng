@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'word_model.dart';
 import 'quiz_page.dart';
@@ -23,12 +24,21 @@ class StudyPage extends StatefulWidget {
 class _StudyPageState extends State<StudyPage> {
   late PageController _pageController;
   late int _currentDayIndex;
+  late List<List<Word>> _shuffledDayChunks;
 
   @override
   void initState() {
     super.initState();
     _currentDayIndex = widget.initialDayIndex;
     _pageController = PageController(initialPage: _currentDayIndex);
+
+    // ★ 랜덤 셔플 로직 유지
+    _shuffledDayChunks = [];
+    for (var chunk in widget.allDayChunks) {
+      List<Word> shuffledChunk = List<Word>.from(chunk);
+      shuffledChunk.shuffle();
+      _shuffledDayChunks.add(shuffledChunk);
+    }
   }
 
   @override
@@ -39,7 +49,6 @@ class _StudyPageState extends State<StudyPage> {
 
   @override
   Widget build(BuildContext context) {
-    // ★ 기기의 하단 안전 여백(갤럭시 내브바, 아이폰 홈바 등)의 높이를 가져옵니다.
     final double bottomPadding = MediaQuery.of(context).padding.bottom;
 
     return Scaffold(
@@ -59,14 +68,13 @@ class _StudyPageState extends State<StudyPage> {
             _currentDayIndex = index;
           });
         },
-        itemCount: widget.allDayChunks.length,
+        itemCount: _shuffledDayChunks.length,
         itemBuilder: (context, dayIndex) {
-          final dayWords = widget.allDayChunks[dayIndex];
+          final dayWords = _shuffledDayChunks[dayIndex];
           final int dayNumber = dayIndex + 1;
 
           return Column(
             children: [
-              // 단어장 리스트 영역
               Expanded(
                 child: dayWords.isEmpty
                     ? const Center(child: Text("등록된 단어가 없습니다."))
@@ -80,74 +88,97 @@ class _StudyPageState extends State<StudyPage> {
                           final word = dayWords[index];
                           int wordNumber = index + 1;
 
-                          return Container(
-                            padding: const EdgeInsets.all(20),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(15),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.grey.withOpacity(0.1),
-                                  blurRadius: 5,
-                                  spreadRadius: 2,
+                          // ★ StatefulBuilder를 사용하여 아이콘 상태만 부분 갱신
+                          return StatefulBuilder(
+                            builder: (context, setStateItem) {
+                              return Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 20,
+                                  vertical: 15,
                                 ),
-                              ],
-                            ),
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: 35,
-                                  height: 35,
-                                  alignment: Alignment.center,
-                                  decoration: BoxDecoration(
-                                    color: Colors.indigo[50],
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: Text(
-                                    "$wordNumber",
-                                    style: TextStyle(
-                                      color: Colors.indigo[800],
-                                      fontWeight: FontWeight.bold,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(15),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.grey.withOpacity(0.1),
+                                      blurRadius: 5,
+                                      spreadRadius: 2,
                                     ),
-                                  ),
+                                  ],
                                 ),
-                                const SizedBox(width: 15),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        word.spelling,
-                                        style: const TextStyle(
-                                          fontSize: 18,
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 35,
+                                      height: 35,
+                                      alignment: Alignment.center,
+                                      decoration: BoxDecoration(
+                                        color: Colors.indigo[50],
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: Text(
+                                        "$wordNumber",
+                                        style: TextStyle(
+                                          color: Colors.indigo[800],
                                           fontWeight: FontWeight.bold,
                                         ),
                                       ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        word.meaning,
-                                        style: TextStyle(
-                                          fontSize: 15,
-                                          color: Colors.grey[700],
-                                        ),
+                                    ),
+                                    const SizedBox(width: 15),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            word.spelling,
+                                            style: const TextStyle(
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            word.meaning,
+                                            style: TextStyle(
+                                              fontSize: 15,
+                                              color: Colors.grey[700],
+                                            ),
+                                          ),
+                                        ],
                                       ),
-                                    ],
-                                  ),
+                                    ),
+                                    // ★ 북마크(스크랩) 버튼 추가
+                                    IconButton(
+                                      onPressed: () {
+                                        setStateItem(() {
+                                          word.isScrap = !word.isScrap;
+                                          word.save(); // DB 저장
+                                        });
+                                      },
+                                      icon: Icon(
+                                        word.isScrap
+                                            ? Icons.star_rounded
+                                            : Icons.star_border_rounded,
+                                        color: word.isScrap
+                                            ? Colors.amber
+                                            : Colors.grey[400],
+                                        size: 30,
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ],
-                            ),
+                              );
+                            },
                           );
                         },
                       ),
               ),
-
-              // ★ 하단 고정 시험 버튼 (갤럭시 내비게이션 바 완벽 대응)
               Container(
-                // 기본 패딩 15에 기기별 하단 내비게이션 바 높이(bottomPadding)를 더해줍니다.
                 padding: EdgeInsets.fromLTRB(20, 15, 20, 15 + bottomPadding),
                 decoration: BoxDecoration(
-                  color: Colors.white, // 배경색이 내비게이션 바 뒤로도 예쁘게 확장됩니다.
+                  color: Colors.white,
                   boxShadow: [
                     BoxShadow(
                       color: Colors.grey.withOpacity(0.08),
@@ -158,7 +189,7 @@ class _StudyPageState extends State<StudyPage> {
                 ),
                 child: SizedBox(
                   width: double.infinity,
-                  height: 60, // 버튼 자체의 시원한 높이 유지
+                  height: 60,
                   child: ElevatedButton.icon(
                     onPressed: () {
                       Navigator.push(

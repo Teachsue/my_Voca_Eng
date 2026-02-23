@@ -5,67 +5,46 @@ part 'word_model.g.dart';
 @HiveType(typeId: 0)
 class Word extends HiveObject {
   @HiveField(0)
-  String spelling;
+  final String category;
 
   @HiveField(1)
-  String meaning;
+  final String level;
 
   @HiveField(2)
-  DateTime nextReviewDate; // 복습 날짜
+  final String spelling;
 
   @HiveField(3)
-  int reviewInterval; // 복습 간격
+  final String meaning;
 
   @HiveField(4)
-  double easeFactor; // 난이도 계수
+  final String type; // 'Word' or 'Quiz'
 
   @HiveField(5)
-  String category;
+  final String? correctAnswer;
 
   @HiveField(6)
-  String level;
+  final List<String>? options;
 
   @HiveField(7)
-  String type; // 'Word' 또는 'Quiz'
+  final String? explanation;
 
   @HiveField(8)
-  String? correctAnswer; // 정답 (퀴즈용)
+  final DateTime nextReviewDate;
 
+  // ★ 추가: 북마크 여부 (기본값은 false)
   @HiveField(9)
-  List<String>? options; // 보기 (퀴즈용)
+  bool isScrap;
 
-  @HiveField(10)
-  String? explanation; // 해설 (퀴즈용)
-
-  // 생성자
   Word({
-    required this.spelling,
-    required this.meaning,
-    DateTime? nextReviewDate, // 선택 사항 (없으면 현재 시간)
-    this.reviewInterval = 0,
-    this.easeFactor = 2.5,
     required this.category,
     required this.level,
-    required this.type,
+    required this.spelling,
+    required this.meaning,
+    this.type = 'Word',
     this.correctAnswer,
     this.options,
     this.explanation,
-  }) : this.nextReviewDate = nextReviewDate ?? DateTime.now();
-
-  // ★ HiveError 방지용 복제 함수 (이걸 쓰면 코드가 훨씬 깔끔해져요!)
-  Word copy() {
-    return Word(
-      spelling: this.spelling,
-      meaning: this.meaning,
-      nextReviewDate: this.nextReviewDate,
-      reviewInterval: this.reviewInterval,
-      easeFactor: this.easeFactor,
-      category: this.category,
-      level: this.level,
-      type: this.type,
-      correctAnswer: this.correctAnswer,
-      options: this.options != null ? List<String>.from(this.options!) : null,
-      explanation: this.explanation,
-    );
-  }
+    required this.nextReviewDate,
+    this.isScrap = false, // 기본값 설정
+  });
 }

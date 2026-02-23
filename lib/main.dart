@@ -13,6 +13,7 @@ import 'todays_word_list_page.dart';
 import 'level_test_page.dart';
 import 'day_selection_page.dart';
 import 'statistics_page.dart';
+import 'scrap_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -537,6 +538,21 @@ class _HomePageState extends State<HomePage> {
                           context,
                           MaterialPageRoute(
                             builder: (context) => const StatisticsPage(),
+                          ),
+                        );
+                        _refresh();
+                      },
+                    ),
+                    _buildMenuCard(
+                      title: "나만의 단어장",
+                      subtitle: "저장한 단어 모아보기",
+                      icon: Icons.star_rounded, // 별 아이콘
+                      color: Colors.amber, // 노란색 테마
+                      onTap: () async {
+                        await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const ScrapPage(),
                           ),
                         );
                         _refresh();

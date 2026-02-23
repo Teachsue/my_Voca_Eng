@@ -162,15 +162,26 @@ class _TodaysQuizPageState extends State<TodaysQuizPage> {
     final currentQuestion = _quizData[_currentIndex];
     bool correct = (selectedAnswer == currentQuestion['correctAnswer']);
 
-    // ★★★ [수정] 오답노트 저장 (copy 함수 사용으로 초간단 해결!) ★★★
+    // ★★★ [수정] 오답노트 저장 (copy 대신 직접 생성) ★★★
     if (!correct) {
       final wrongBox = Hive.box<Word>('wrong_answers');
 
       if (currentQuestion['word'] != null) {
         final originWord = currentQuestion['word'] as Word;
 
-        // .copy() 한 방이면 새로운 객체가 되어 안전하게 저장됩니다.
-        final newWord = originWord.copy();
+        // .copy() 대신 기존 속성을 그대로 가져와 새로운 Word 객체를 만듭니다.
+        final newWord = Word(
+          category: originWord.category,
+          level: originWord.level,
+          spelling: originWord.spelling,
+          meaning: originWord.meaning,
+          type: originWord.type,
+          correctAnswer: originWord.correctAnswer,
+          options: originWord.options,
+          explanation: originWord.explanation,
+          isScrap: originWord.isScrap,
+          nextReviewDate: DateTime.now(), // 필수값이므로 현재 시간을 꼭 넣어줍니다.
+        );
 
         wrongBox.put(newWord.spelling, newWord);
         print("📝 오답노트 저장 완료: ${newWord.spelling}");
