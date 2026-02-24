@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'word_model.dart';
 import 'quiz_page.dart';
 
@@ -39,6 +40,14 @@ class _StudyPageState extends State<StudyPage> {
       shuffledChunk.shuffle();
       _shuffledDayChunks.add(shuffledChunk);
     }
+
+    _saveLastStudiedDay(_currentDayIndex + 1);
+  }
+
+  void _saveLastStudiedDay(int dayNumber) {
+    final cacheBox = Hive.box('cache');
+    final key = "last_studied_day_${widget.category}_${widget.level}";
+    cacheBox.put(key, dayNumber);
   }
 
   @override
@@ -60,6 +69,13 @@ class _StudyPageState extends State<StudyPage> {
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.home_rounded),
+            onPressed: () => Navigator.popUntil(context, (route) => route.isFirst),
+          ),
+          const SizedBox(width: 8),
+        ],
       ),
       body: PageView.builder(
         controller: _pageController,
@@ -67,6 +83,7 @@ class _StudyPageState extends State<StudyPage> {
           setState(() {
             _currentDayIndex = index;
           });
+          _saveLastStudiedDay(_currentDayIndex + 1);
         },
         itemCount: _shuffledDayChunks.length,
         itemBuilder: (context, dayIndex) {
