@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/icon.png" width="120">
+</p>
+
 # 📚 포켓보카 (Pocket Voca)
 
 **나만의 맞춤형 영단어 학습 애플리케이션** 🚀
