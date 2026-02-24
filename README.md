@@ -19,7 +19,7 @@
 
 ### 🧩 3. 쾌적한 퀴즈 및 학습 환경
 * 단어 카드 형태의 깔끔한 UI로 스와이프하며 단어를 학습합니다.
-* 객관식 및 주관식 형태의 퀴즈 시스템을 제공하며, 틀린 문제는 자동으로 분류됩니다.
+* **영어-한글 및 한글-영어 무작위 퀴즈** 시스템을 제공하여 학습 효과를 극대화하며, 틀린 문제는 자동으로 분류됩니다.
 
 ### 📝 4. 오답 노트 및 나만의 단어장 (북마크)
 * **오답 노트:** 퀴즈에서 틀린 단어들은 오답 노트 DB에 자동 저장되어 집중적으로 복습할 수 있습니다.
@@ -45,8 +45,14 @@
 
 <p align="center">
   <img src="assets/screenshots/main.png" width="24%">
+  <img src="assets/screenshots/level_test.png" width="24%">
   <img src="assets/screenshots/study.png" width="24%">
+  <img src="assets/screenshots/todays_words.png" width="24%">
+</p>
+<p align="center">
   <img src="assets/screenshots/quiz.png" width="24%">
+  <img src="assets/screenshots/scrap.png" width="24%">
+  <img src="assets/screenshots/wrong_note.png" width="24%">
   <img src="assets/screenshots/statistics.png" width="24%">
 </p>
 
