@@ -27,13 +27,14 @@ class WordAdapter extends TypeAdapter<Word> {
       explanation: fields[7] as String?,
       nextReviewDate: fields[8] as DateTime,
       isScrap: fields[9] as bool,
+      reviewStep: fields[10] as int?,
     );
   }
 
   @override
   void write(BinaryWriter writer, Word obj) {
     writer
-      ..writeByte(10)
+      ..writeByte(11)
       ..writeByte(0)
       ..write(obj.category)
       ..writeByte(1)
@@ -53,7 +54,9 @@ class WordAdapter extends TypeAdapter<Word> {
       ..writeByte(8)
       ..write(obj.nextReviewDate)
       ..writeByte(9)
-      ..write(obj.isScrap);
+      ..write(obj.isScrap)
+      ..writeByte(10)
+      ..write(obj.reviewStep);
   }
 
   @override

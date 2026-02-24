@@ -5,35 +5,38 @@ part 'word_model.g.dart';
 @HiveType(typeId: 0)
 class Word extends HiveObject {
   @HiveField(0)
-  final String category;
+  String category;
 
   @HiveField(1)
-  final String level;
+  String level;
 
   @HiveField(2)
-  final String spelling;
+  String spelling;
 
   @HiveField(3)
-  final String meaning;
+  String meaning;
 
   @HiveField(4)
-  final String type; // 'Word' or 'Quiz'
+  String type; // 'Word' or 'Quiz'
 
   @HiveField(5)
-  final String? correctAnswer;
+  String? correctAnswer;
 
   @HiveField(6)
-  final List<String>? options;
+  List<String>? options;
 
   @HiveField(7)
-  final String? explanation;
+  String? explanation;
 
   @HiveField(8)
-  final DateTime nextReviewDate;
+  DateTime nextReviewDate;
 
-  // ★ 추가: 북마크 여부 (기본값은 false)
   @HiveField(9)
   bool isScrap;
+
+  // ★ 수정: 널 허용(int?)으로 변경하여 구버전 데이터 로드 시 캐스팅 에러 방지
+  @HiveField(10)
+  int? reviewStep;
 
   Word({
     required this.category,
@@ -45,6 +48,35 @@ class Word extends HiveObject {
     this.options,
     this.explanation,
     required this.nextReviewDate,
-    this.isScrap = false, // 기본값 설정
+    this.isScrap = false,
+    this.reviewStep = 0,
   });
+
+  // 단계 접근 시 null이면 0 반환
+  int get currentStep => reviewStep ?? 0;
+
+  void updateReviewStep(bool isCorrect) {
+    int nextStep = currentStep;
+    if (isCorrect) {
+      nextStep++;
+    } else {
+      nextStep = 0;
+    }
+    reviewStep = nextStep;
+
+    int daysToAdd = 0;
+    switch (nextStep) {
+      case 0: daysToAdd = 0; break;
+      case 1: daysToAdd = 1; break;
+      case 2: daysToAdd = 2; break;
+      case 3: daysToAdd = 4; break;
+      case 4: daysToAdd = 7; break;
+      case 5: daysToAdd = 15; break;
+      case 6: daysToAdd = 30; break;
+      default: daysToAdd = 30; break;
+    }
+
+    final now = DateTime.now();
+    nextReviewDate = DateTime(now.year, now.month, now.day).add(Duration(days: daysToAdd));
+  }
 }

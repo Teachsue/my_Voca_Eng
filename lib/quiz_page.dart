@@ -10,16 +10,16 @@ class QuizPage extends StatefulWidget {
   final int questionCount;
   final int? dayNumber;
   final List<Word>? dayWords;
-  final bool isWrongAnswerQuiz; // ★ 추가
+  final bool isWrongAnswerQuiz;
 
   const QuizPage({
     super.key,
-    this.category = "오답노트", // ★ 기본값 설정
+    this.category = "오답노트",
     this.level = "",
     this.questionCount = 0,
     this.dayNumber,
     this.dayWords,
-    this.isWrongAnswerQuiz = false, // ★ 추가
+    this.isWrongAnswerQuiz = false,
   });
 
   @override
@@ -40,7 +40,6 @@ class _QuizPageState extends State<QuizPage> {
   @override
   void initState() {
     super.initState();
-    // ★ 캐시 키 생성 로직 수정
     if (widget.isWrongAnswerQuiz) {
       _cacheKey = "quiz_wrong_answers";
     } else {
@@ -73,7 +72,7 @@ class _QuizPageState extends State<QuizPage> {
 
   void _initializeQuiz() {
     if (widget.isWrongAnswerQuiz) {
-      _loadNewQuizData(0); // 오답노트 퀴즈는 전체 로드
+      _loadNewQuizData(0);
     } else if (widget.dayNumber == null && widget.questionCount <= 0) {
       _showQuestionCountSelection();
     } else {
@@ -82,101 +81,59 @@ class _QuizPageState extends State<QuizPage> {
     }
   }
 
-  // ★ 변경: 뒤로가기 및 빈 공간 터치를 허용하고, 취소 시 화면을 빠져나가도록 구현
   void _showResumeDialog(dynamic savedData) {
     showDialog<bool>(
       context: context,
-      barrierDismissible: true, // 바깥을 터치해서 닫을 수 있게 허용
+      barrierDismissible: true,
       builder: (dialogContext) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text(
-          "퀴즈 이어 풀기",
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
+        title: const Text("퀴즈 이어 풀기", style: TextStyle(fontWeight: FontWeight.bold)),
         content: const Text("이전에 풀던 기록이 있습니다.\n이어서 푸시겠습니까?"),
         actions: [
           TextButton(
             onPressed: () {
               _clearProgress();
-              Navigator.pop(dialogContext, true); // 정상적으로 선택했음을 true로 알림
+              Navigator.pop(dialogContext, true);
               _initializeQuiz();
             },
-            child: const Text(
-              "새로 풀기",
-              style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold),
-            ),
+            child: const Text("새로 풀기", style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
           ),
           ElevatedButton(
             onPressed: () {
-              Navigator.pop(dialogContext, true); // 정상적으로 선택했음을 true로 알림
+              Navigator.pop(dialogContext, true);
               _restoreFromCache(savedData);
             },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.indigo,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-            child: const Text(
-              "이어서 풀기",
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.indigo, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+            child: const Text("이어서 풀기", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
     ).then((handled) {
-      // handled가 null이라는 것은 버튼을 누르지 않고 뒤로가기나 배경을 눌러서 팝업이 꺼졌다는 뜻
-      if (handled == null) {
-        Navigator.pop(context); // 텅 빈 퀴즈 페이지에 남지 않도록 이전 화면으로 완전히 돌아갑니다.
-      }
+      if (handled == null) Navigator.pop(context);
     });
   }
 
-  // ★ 변경: 문제 수 선택 팝업도 동일하게 뒤로가기 로직 적용
   void _showQuestionCountSelection() {
     showDialog<bool>(
       context: context,
       barrierDismissible: true,
       builder: (BuildContext dialogContext) {
         return SimpleDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          title: const Text(
-            "문제 수 선택",
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Text("문제 수 선택", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
           children: [10, 20, 30].map((count) {
             return SimpleDialogOption(
               onPressed: () {
                 Navigator.pop(dialogContext, true);
                 _loadNewQuizData(count);
               },
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  vertical: 12.0,
-                  horizontal: 8.0,
-                ),
-                child: Text(
-                  "$count문제",
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
+              child: Padding(padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 8.0), child: Text("$count문제", style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500))),
             );
           }).toList(),
         );
       },
     ).then((handled) {
-      // 배경 터치나 뒤로가기를 했을 경우 이전 화면으로 빠져나갑니다.
-      if (handled == null) {
-        Navigator.pop(context);
-      }
+      if (handled == null) Navigator.pop(context);
     });
   }
 
@@ -189,22 +146,13 @@ class _QuizPageState extends State<QuizPage> {
     try {
       setState(() {
         _currentIndex = savedData['index'] ?? 0;
-        _wrongAnswersList = (savedData['wrongAnswers'] as List)
-            .map((e) => Map<String, dynamic>.from(e))
-            .toList();
-
-        _quizData = (savedData['quizData'] as List)
-            .map((e) => Map<String, dynamic>.from(e))
-            .toList();
-
+        _wrongAnswersList = (savedData['wrongAnswers'] as List).map((e) => Map<String, dynamic>.from(e)).toList();
+        _quizData = (savedData['quizData'] as List).map((e) => Map<String, dynamic>.from(e)).toList();
         _quizList = [];
         for (var data in _quizData) {
-          // ★ 오답노트 퀴즈인 경우 wrong_answers 박스에서도 찾음
           Word? word;
           try {
-            word = allWords.firstWhere(
-              (w) => w.spelling == data['question'] && w.type == 'Word',
-            );
+            word = allWords.firstWhere((w) => w.spelling == data['question'] && w.type == 'Word');
           } catch (e) {
             try {
               word = allWords.firstWhere((w) => w.spelling == data['question']);
@@ -227,35 +175,19 @@ class _QuizPageState extends State<QuizPage> {
       _quizList.shuffle();
     } else {
       final box = Hive.box<Word>('words');
-      List<Word> filteredList = box.values.where((word) {
-        return word.category == widget.category &&
-            word.level == widget.level &&
-            word.type == 'Word';
-      }).toList();
-
-      if (filteredList.isEmpty) {
-        filteredList = box.values.where((word) {
-          return word.category == widget.category && word.level == widget.level;
-        }).toList();
-      }
-
+      List<Word> filteredList = box.values.where((word) => word.category == widget.category && word.level == widget.level && word.type == 'Word').toList();
+      if (filteredList.isEmpty) filteredList = box.values.where((word) => word.category == widget.category && word.level == widget.level).toList();
       final Map<String, Word> uniqueMap = {};
-      for (var w in filteredList) {
-        uniqueMap.putIfAbsent(w.spelling.trim().toLowerCase(), () => w);
-      }
-
+      for (var w in filteredList) uniqueMap.putIfAbsent(w.spelling.trim().toLowerCase(), () => w);
       List<Word> finalPool = uniqueMap.values.toList();
       finalPool.shuffle();
-
       int targetCount = count > 0 ? count : (widget.isWrongAnswerQuiz ? finalPool.length : 10);
       _quizList = finalPool.take(min(targetCount, finalPool.length)).toList();
     }
-
     if (_quizList.isNotEmpty) {
       _generateQuizQuestions();
       _saveProgress();
     }
-
     if (mounted) setState(() {});
   }
 
@@ -274,63 +206,35 @@ class _QuizPageState extends State<QuizPage> {
       if (isSpellingToMeaning) {
         question = word.spelling;
         correctAnswer = word.meaning;
-
-        List<Word> distractorsPool = allWords
-            .where((w) =>
-                w.meaning != correctAnswer && w.spelling != word.spelling)
-            .toList();
+        List<Word> distractorsPool = allWords.where((w) => w.meaning != correctAnswer && w.spelling != word.spelling).toList();
         distractorsPool.shuffle();
         List<Word> selectedDistractors = distractorsPool.take(3).toList();
-
         answerToInfo[correctAnswer] = word.spelling;
-        for (var d in selectedDistractors) {
-          answerToInfo[d.meaning] = d.spelling;
-        }
+        for (var d in selectedDistractors) answerToInfo[d.meaning] = d.spelling;
       } else {
         question = word.meaning;
         correctAnswer = word.spelling;
-
-        List<Word> distractorsPool = allWords
-            .where((w) =>
-                w.spelling != correctAnswer && w.meaning != word.meaning)
-            .toList();
+        List<Word> distractorsPool = allWords.where((w) => w.spelling != correctAnswer && w.meaning != word.meaning).toList();
         distractorsPool.shuffle();
         List<Word> selectedDistractors = distractorsPool.take(3).toList();
-
         answerToInfo[correctAnswer] = word.meaning;
-        for (var d in selectedDistractors) {
-          answerToInfo[d.spelling] = d.meaning;
-        }
+        for (var d in selectedDistractors) answerToInfo[d.spelling] = d.meaning;
       }
-
       List<String> options = answerToInfo.keys.toList();
       options.shuffle();
-
-      _quizData.add({
-        'question': question,
-        'correctAnswer': correctAnswer,
-        'options': options,
-        'answerToInfo': answerToInfo,
-        'word': word,
-        'isSpellingToMeaning': isSpellingToMeaning,
-      });
+      _quizData.add({'question': question, 'correctAnswer': correctAnswer, 'options': options, 'answerToInfo': answerToInfo, 'word': word, 'isSpellingToMeaning': isSpellingToMeaning});
     }
   }
 
   void _checkAnswer(String selectedAnswer) {
     if (_isChecked) return;
-
     final currentQuestion = _quizData[_currentIndex];
     bool correct = (selectedAnswer == currentQuestion['correctAnswer']);
-
     if (correct) {
       try {
         final cacheBox = Hive.box('cache');
-        List<String> learnedWords = List<String>.from(
-          cacheBox.get('learned_words', defaultValue: []),
-        );
+        List<String> learnedWords = List<String>.from(cacheBox.get('learned_words', defaultValue: []));
         String spelling = (currentQuestion['word'] as Word).spelling;
-
         if (!learnedWords.contains(spelling)) {
           learnedWords.add(spelling);
           cacheBox.put('learned_words', learnedWords);
@@ -341,123 +245,59 @@ class _QuizPageState extends State<QuizPage> {
         if (Hive.isBoxOpen('wrong_answers')) {
           final wrongBox = Hive.box<Word>('wrong_answers');
           final Word originWord = currentQuestion['word'];
-
-          final wordToSave = Word(
-            category: originWord.category,
-            level: originWord.level,
-            type: 'Word',
-            spelling: originWord.spelling,
-            meaning: originWord.meaning,
-            nextReviewDate: DateTime.now(),
-          );
+          final wordToSave = Word(category: originWord.category, level: originWord.level, type: 'Word', spelling: originWord.spelling, meaning: originWord.meaning, nextReviewDate: DateTime.now());
           wrongBox.put(wordToSave.spelling, wordToSave);
         }
       } catch (e) {}
     }
-
     setState(() {
       _isChecked = true;
       _userSelectedAnswer = selectedAnswer;
       _isCorrect = correct;
     });
-
     if (!correct) {
-      _wrongAnswersList.add({
-        'spelling': (currentQuestion['word'] as Word).spelling,
-        'userAnswer': selectedAnswer,
-        'correctAnswer': currentQuestion['correctAnswer'],
-      });
+      final String userInfo = currentQuestion['answerToInfo'][selectedAnswer] ?? "";
+      final String correctInfo = currentQuestion['answerToInfo'][currentQuestion['correctAnswer']] ?? "";
+      _wrongAnswersList.add({'spelling': (currentQuestion['word'] as Word).spelling, 'userAnswer': selectedAnswer, 'userAnswerInfo': userInfo, 'correctAnswer': currentQuestion['correctAnswer'], 'correctAnswerInfo': correctInfo});
     }
     _saveProgress();
   }
 
   void _nextQuestion() {
     if (_currentIndex < _quizData.length - 1) {
-      setState(() {
-        _currentIndex++;
-        _isChecked = false;
-        _userSelectedAnswer = null;
-      });
+      setState(() { _currentIndex++; _isChecked = false; _userSelectedAnswer = null; });
       _saveProgress();
     } else {
       _clearProgress();
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => TodaysQuizResultPage(
-            wrongAnswers: _wrongAnswersList,
-            totalCount: _quizData.length,
-            isTodaysQuiz: false,
-          ),
-        ),
-      );
+      Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => TodaysQuizResultPage(wrongAnswers: _wrongAnswersList, totalCount: _quizData.length, isTodaysQuiz: false)));
     }
   }
 
   void _saveProgress() {
     final cacheBox = Hive.box('cache');
-    cacheBox.put(_cacheKey, {
-      'index': _currentIndex,
-      'wrongAnswers': _wrongAnswersList,
-      'quizData': _quizData,
-    });
+    cacheBox.put(_cacheKey, {'index': _currentIndex, 'wrongAnswers': _wrongAnswersList, 'quizData': _quizData});
   }
 
   void _clearProgress() => Hive.box('cache').delete(_cacheKey);
 
   @override
   Widget build(BuildContext context) {
-    if (_quizList.isEmpty && _quizData.isEmpty) {
-      return Scaffold(
-        backgroundColor: const Color(0xFFF5F7FA),
-        appBar: AppBar(
-          backgroundColor: Colors.white,
-          foregroundColor: Colors.black,
-          elevation: 0,
-        ),
-        // 팝업이 뜰 때나 데이터 로딩 중 빈 화면 방지용 프로그레스
-        body: const Center(
-          child: CircularProgressIndicator(color: Colors.indigo),
-        ),
-      );
-    }
-
-    if (_quizData.isEmpty) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator(color: Colors.indigo)),
-      );
-    }
+    if (_quizList.isEmpty && _quizData.isEmpty) return Scaffold(backgroundColor: const Color(0xFFF5F7FA), appBar: AppBar(backgroundColor: Colors.white, foregroundColor: Colors.black, elevation: 0), body: const Center(child: CircularProgressIndicator(color: Colors.indigo)));
+    if (_quizData.isEmpty) return const Scaffold(body: Center(child: CircularProgressIndicator(color: Colors.indigo)));
 
     final currentQuestion = _quizData[_currentIndex];
     final options = currentQuestion['options'] as List<String>;
     final Map<dynamic, dynamic> rawMap = currentQuestion['answerToInfo'] ?? {};
-    final Map<String, String> answerToInfo = rawMap.map(
-      (k, v) => MapEntry(k.toString(), v.toString()),
-    );
-    final bool isSpellingToMeaning =
-        currentQuestion['isSpellingToMeaning'] ?? true;
+    final Map<String, String> answerToInfo = rawMap.map((k, v) => MapEntry(k.toString(), v.toString()));
+    final bool isSpellingToMeaning = currentQuestion['isSpellingToMeaning'] ?? true;
 
     String appBarTitle = widget.isWrongAnswerQuiz
         ? "오답노트 퀴즈 (${_currentIndex + 1}/${_quizData.length})"
-        : (widget.dayNumber != null
-            ? "${widget.category} ${widget.level} - DAY ${widget.dayNumber} (${_currentIndex + 1}/${_quizData.length})"
-            : "${widget.category} ${widget.level} (${_currentIndex + 1}/${_quizData.length})");
+        : (widget.dayNumber != null ? "${widget.category} ${widget.level} - DAY ${widget.dayNumber} (${_currentIndex + 1}/${_quizData.length})" : "${widget.category} ${widget.level} (${_currentIndex + 1}/${_quizData.length})");
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
-      appBar: AppBar(
-        title: Text(appBarTitle, style: const TextStyle(fontSize: 16)),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new),
-          onPressed: () {
-            _saveProgress();
-            Navigator.pop(context);
-          },
-        ),
-      ),
+      appBar: AppBar(title: Text(appBarTitle, style: const TextStyle(fontSize: 16)), backgroundColor: Colors.white, foregroundColor: Colors.black, elevation: 0, leading: IconButton(icon: const Icon(Icons.arrow_back_ios_new), onPressed: () { _saveProgress(); Navigator.pop(context); })),
       bottomNavigationBar: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
@@ -466,125 +306,61 @@ class _QuizPageState extends State<QuizPage> {
             child: ElevatedButton(
               onPressed: _isChecked ? _nextQuestion : null,
               style: ElevatedButton.styleFrom(
-                backgroundColor: _isChecked
-                    ? (_isCorrect ? Colors.green : Colors.indigo)
-                    : Colors.grey[300],
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(15),
-                ),
+                backgroundColor: _isChecked ? (_isCorrect ? Colors.green : Colors.indigo) : Colors.grey[300],
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
                 elevation: 0,
               ),
-              child: Text(
-                _isChecked
-                    ? (_currentIndex < _quizData.length - 1 ? "다음 문제" : "결과 보기")
-                    : "정답을 선택하세요",
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
+              child: Text(_isChecked ? (_currentIndex < _quizData.length - 1 ? "다음 문제" : "결과 보기") : "정답을 선택하세요", style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
             ),
           ),
         ),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 60, horizontal: 20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(25),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 10,
-                    spreadRadius: 5,
-                  ),
-                ],
-              ),
-              child: Column(
-                children: [
-                  Text(
-                    isSpellingToMeaning ? "뜻을 선택하세요" : "단어를 선택하세요",
-                    style: TextStyle(color: Colors.grey[600], fontSize: 16),
-                  ),
-                  const SizedBox(height: 20),
-                  Text(
-                    currentQuestion['question'],
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: isSpellingToMeaning ? 40 : 32,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.indigo,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 30),
-            ...options.map((option) {
-              bool isCorrectOption = option == currentQuestion['correctAnswer'];
-              bool isSelected = option == _userSelectedAnswer;
-
-              Color btnColor = Colors.white;
-              Color borderCol = Colors.grey[300]!;
-              Color textColor = Colors.black87;
-
-              String info = answerToInfo[option] ?? "";
-              String buttonText = _isChecked ? "$option\n($info)" : option;
-
-              if (_isChecked) {
-                if (isCorrectOption) {
-                  btnColor = Colors.green[50]!;
-                  borderCol = Colors.green;
-                  textColor = Colors.green[900]!;
-                } else if (isSelected) {
-                  btnColor = Colors.red[50]!;
-                  borderCol = Colors.red;
-                  textColor = Colors.red[900]!;
-                } else {
-                  textColor = Colors.grey;
-                }
-              }
-
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 15),
-                child: Container(
-                  width: double.infinity,
-                  height: 85,
-                  child: OutlinedButton(
-                    onPressed: () => _checkAnswer(option),
-                    style: OutlinedButton.styleFrom(
-                      backgroundColor: btnColor,
-                      side: BorderSide(color: borderCol, width: 2),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(15),
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                        vertical: 8,
-                        horizontal: 10,
-                      ),
-                    ),
-                    child: Text(
-                      buttonText,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 17,
-                        fontWeight: isCorrectOption && _isChecked
-                            ? FontWeight.bold
-                            : FontWeight.normal,
-                        color: textColor,
-                      ),
-                    ),
-                  ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            children: [
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
+                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(25), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, spreadRadius: 5)]),
+                child: Column(
+                  children: [
+                    Text(isSpellingToMeaning ? "뜻을 선택하세요" : "단어를 선택하세요", style: TextStyle(color: Colors.grey[600], fontSize: 14)),
+                    const SizedBox(height: 15),
+                    Text(currentQuestion['question'], textAlign: TextAlign.center, style: TextStyle(fontSize: isSpellingToMeaning ? 36 : 28, fontWeight: FontWeight.bold, color: Colors.indigo)),
+                  ],
                 ),
-              );
-            }).toList(),
-          ],
+              ),
+              const SizedBox(height: 25),
+              ...options.map((option) {
+                bool isCorrectOption = option == currentQuestion['correctAnswer'];
+                bool isSelected = option == _userSelectedAnswer;
+                Color btnColor = Colors.white;
+                Color borderCol = Colors.grey[300]!;
+                Color textColor = Colors.black87;
+                String info = answerToInfo[option] ?? "";
+                String buttonText = _isChecked ? "$option\n($info)" : option;
+                if (_isChecked) {
+                  if (isCorrectOption) { btnColor = Colors.green[50]!; borderCol = Colors.green; textColor = Colors.green[900]!; }
+                  else if (isSelected) { btnColor = Colors.red[50]!; borderCol = Colors.red; textColor = Colors.red[900]!; }
+                  else { textColor = Colors.grey; }
+                }
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Container(
+                    width: double.infinity,
+                    constraints: const BoxConstraints(minHeight: 75),
+                    child: OutlinedButton(
+                      onPressed: () => _checkAnswer(option),
+                      style: OutlinedButton.styleFrom(backgroundColor: btnColor, side: BorderSide(color: borderCol, width: 2), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)), padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10)),
+                      child: Text(buttonText, textAlign: TextAlign.center, style: TextStyle(fontSize: 16, fontWeight: isCorrectOption && _isChecked ? FontWeight.bold : FontWeight.normal, color: textColor)),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ],
+          ),
         ),
       ),
     );

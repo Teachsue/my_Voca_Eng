@@ -195,7 +195,12 @@ class _TodaysQuizPageState extends State<TodaysQuizPage> {
     final currentQuestion = _quizData[_currentIndex];
     bool correct = (selectedAnswer == currentQuestion['correctAnswer']);
 
-    // ★★★ [수정] 오답노트 저장 (copy 대신 직접 생성) ★★★
+    // ★ 에빙하우스 알고리즘 반영: 단어 데이터 업데이트
+    final word = currentQuestion['word'] as Word;
+    word.updateReviewStep(correct);
+    word.save(); // 변경사항 DB 저장
+
+    // ★ [수정] 오답노트 저장 (copy 대신 직접 생성) ★★★
     if (!correct) {
       final wrongBox = Hive.box<Word>('wrong_answers');
 
@@ -213,11 +218,12 @@ class _TodaysQuizPageState extends State<TodaysQuizPage> {
           options: originWord.options,
           explanation: originWord.explanation,
           isScrap: originWord.isScrap,
-          nextReviewDate: DateTime.now(), // 필수값이므로 현재 시간을 꼭 넣어줍니다.
+          nextReviewDate: originWord.nextReviewDate, // 업데이트된 날짜 사용
+          reviewStep: originWord.reviewStep, // 업데이트된 단계 사용
         );
 
         wrongBox.put(newWord.spelling, newWord);
-        print("📝 오답노트 저장 완료: ${newWord.spelling}");
+        print("📝 오답노트 저장 완료 및 에빙하우스 적용: ${newWord.spelling}");
       }
     }
 
@@ -228,10 +234,15 @@ class _TodaysQuizPageState extends State<TodaysQuizPage> {
     });
 
     if (!correct) {
+      final String userInfo = currentQuestion['optionInfos'][selectedAnswer] ?? "";
+      final String correctInfo = currentQuestion['optionInfos'][currentQuestion['correctAnswer']] ?? "";
+
       _wrongAnswersList.add({
         'spelling': (currentQuestion['word'] as Word).spelling,
         'userAnswer': selectedAnswer,
+        'userAnswerInfo': userInfo,
         'correctAnswer': currentQuestion['correctAnswer'],
+        'correctAnswerInfo': correctInfo,
       });
     }
   }

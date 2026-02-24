@@ -6,13 +6,13 @@ import 'study_record_service.dart';
 class TodaysQuizResultPage extends StatelessWidget {
   final List<Map<String, dynamic>> wrongAnswers;
   final int totalCount;
-  final bool isTodaysQuiz; // ★ 추가: 오늘의 퀴즈 여부 구분
+  final bool isTodaysQuiz;
 
   const TodaysQuizResultPage({
     super.key,
     required this.wrongAnswers,
     required this.totalCount,
-    this.isTodaysQuiz = false, // 기본값은 false
+    this.isTodaysQuiz = false,
   });
 
   @override
@@ -30,7 +30,7 @@ class TodaysQuizResultPage extends StatelessWidget {
     );
   }
 
-  // 1. 만점 화면
+  // 1. 만점 화면 (완료 처리 가능)
   Widget _buildPerfectView(BuildContext context) {
     return Center(
       child: Padding(
@@ -80,7 +80,6 @@ class TodaysQuizResultPage extends StatelessWidget {
               height: 56,
               child: ElevatedButton(
                 onPressed: () async {
-                  // ★ 오늘의 퀴즈인 경우에만 출석 도장 로직 실행
                   if (isTodaysQuiz) {
                     final cacheBox = Hive.box('cache');
                     final String todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
@@ -112,11 +111,10 @@ class TodaysQuizResultPage extends StatelessWidget {
     );
   }
 
-  // 2. 오답 화면
+  // 2. 오답 화면 (완료 처리 불가, 재도전 유도)
   Widget _buildWrongAnswerView(BuildContext context, int score) {
     return Column(
       children: [
-        // 상단 점수 카드
         Container(
           margin: const EdgeInsets.fromLTRB(20, 20, 20, 10),
           padding: const EdgeInsets.symmetric(vertical: 30, horizontal: 20),
@@ -134,7 +132,7 @@ class TodaysQuizResultPage extends StatelessWidget {
           child: Column(
             children: [
               Text(
-                isTodaysQuiz ? "오늘의 학습 결과" : "퀴즈 결과",
+                isTodaysQuiz ? "아쉬워요! 다시 도전해볼까요? 💪" : "퀴즈 결과",
                 style: const TextStyle(
                   color: Colors.grey,
                   fontSize: 14,
@@ -167,14 +165,15 @@ class TodaysQuizResultPage extends StatelessWidget {
               ),
               const SizedBox(height: 10),
               Text(
-                "${wrongAnswers.length}개를 틀렸어요. 오답을 확인해보세요.",
+                isTodaysQuiz 
+                    ? "만점을 받아야 학습이 완료됩니다!"
+                    : "${wrongAnswers.length}개를 틀렸어요. 오답을 확인해보세요.",
                 style: TextStyle(color: Colors.grey[600], fontSize: 14),
               ),
             ],
           ),
         ),
 
-        // 오답 리스트 카드
         Expanded(
           child: ListView.builder(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
@@ -200,28 +199,17 @@ class TodaysQuizResultPage extends StatelessWidget {
                   children: [
                     Row(
                       children: [
-                        Icon(
-                          Icons.edit_note_rounded,
-                          color: Colors.red.shade400,
-                          size: 26,
-                        ),
+                        Icon(Icons.edit_note_rounded, color: Colors.red.shade400, size: 26),
                         const SizedBox(width: 8),
                         Text(
                           item['spelling'] ?? '',
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black87,
-                          ),
+                          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                         ),
                       ],
                     ),
                     const SizedBox(height: 16),
                     Container(
-                      padding: const EdgeInsets.symmetric(
-                        vertical: 15,
-                        horizontal: 16,
-                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 16),
                       decoration: BoxDecoration(
                         color: Colors.red.shade50.withOpacity(0.5),
                         borderRadius: BorderRadius.circular(14),
@@ -230,61 +218,39 @@ class TodaysQuizResultPage extends StatelessWidget {
                         children: [
                           Expanded(
                             child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
-                                Text(
-                                  "내가 쓴 답",
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: Colors.red.shade300,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
+                                const Text("내가 쓴 답", style: TextStyle(fontSize: 11, color: Colors.red, fontWeight: FontWeight.bold)),
                                 const SizedBox(height: 6),
                                 Text(
-                                  "${item['userAnswer']}",
+                                  item['userAnswerInfo'] != null && item['userAnswerInfo'].isNotEmpty
+                                      ? "${item['userAnswer']}\n(${item['userAnswerInfo']})"
+                                      : "${item['userAnswer']}",
+                                  textAlign: TextAlign.center,
                                   style: TextStyle(
                                     color: Colors.red.shade400,
-                                    fontSize: 15,
                                     decoration: TextDecoration.lineThrough,
-                                    decorationColor: Colors.red.shade400,
+                                    fontSize: 13,
                                   ),
-                                  textAlign: TextAlign.center,
                                 ),
                               ],
                             ),
                           ),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8.0,
-                            ),
-                            child: Icon(
-                              Icons.arrow_forward_rounded,
-                              color: Colors.grey.shade400,
-                              size: 20,
-                            ),
-                          ),
+                          Icon(Icons.arrow_forward_rounded, color: Colors.grey.shade400),
                           Expanded(
                             child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
-                                Text(
-                                  "정답",
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: Colors.green.shade600,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
+                                const Text("정답", style: TextStyle(fontSize: 11, color: Colors.green, fontWeight: FontWeight.bold)),
                                 const SizedBox(height: 6),
                                 Text(
-                                  "${item['correctAnswer']}",
+                                  item['correctAnswerInfo'] != null && item['correctAnswerInfo'].isNotEmpty
+                                      ? "${item['correctAnswer']}\n(${item['correctAnswerInfo']})"
+                                      : "${item['correctAnswer']}",
+                                  textAlign: TextAlign.center,
                                   style: TextStyle(
                                     color: Colors.green.shade700,
-                                    fontSize: 15,
                                     fontWeight: FontWeight.bold,
+                                    fontSize: 13,
                                   ),
-                                  textAlign: TextAlign.center,
                                 ),
                               ],
                             ),
@@ -299,37 +265,23 @@ class TodaysQuizResultPage extends StatelessWidget {
           ),
         ),
 
-        // 하단 복귀 버튼
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
           child: SizedBox(
             width: double.infinity,
             height: 56,
             child: ElevatedButton(
-              onPressed: () async {
-                // ★ 오답이 있더라도 '오늘의 퀴즈'를 끝까지 풀었다면 완료 처리를 할지 결정
-                // 사용자님의 요청에 따라, 여기서도 isTodaysQuiz일 때만 완료 로직을 태웁니다.
-                if (isTodaysQuiz) {
-                  final cacheBox = Hive.box('cache');
-                  final String todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
-                  cacheBox.put("today_completed_$todayStr", true);
-                  await StudyRecordService.markTodayAsDone();
-                }
-
-                if (context.mounted) {
-                  Navigator.of(context).popUntil((route) => route.isFirst);
-                }
+              onPressed: () {
+                // ★ 만점이 아닐 때는 완료 처리 없이 이전 화면(단어 리스트)으로 돌아가 재도전 유도
+                Navigator.pop(context);
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: isTodaysQuiz ? Colors.indigo : Colors.blueGrey.shade600,
+                backgroundColor: Colors.blueGrey.shade600,
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                elevation: 0,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               ),
               child: Text(
-                isTodaysQuiz ? "학습 완료 (메인으로)" : "확인 (메인으로)",
+                isTodaysQuiz ? "틀린 단어 복습하고 재도전하기" : "확인",
                 style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
             ),
