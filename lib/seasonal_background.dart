@@ -14,6 +14,7 @@ class SeasonalBackground extends StatelessWidget {
     final bgGradient = ThemeManager.bgGradient;
     final icon = ThemeManager.seasonIconData;
     final primaryColor = ThemeManager.pointColor;
+    final bool isDark = ThemeManager.isDarkMode;
 
     return Container(
       width: double.infinity,
@@ -26,15 +27,18 @@ class SeasonalBackground extends StatelessWidget {
         ),
       ),
       child: Stack(
-        clipBehavior: Clip.none,
+        // ★ clipBehavior를 하드엣지로 변경하여 화면 밖 노란색 경고선 방지
+        clipBehavior: Clip.hardEdge, 
         children: [
           Positioned(
-            top: -40,
-            right: -40,
+            top: -60,
+            right: -60,
             child: Icon(
               icon,
-              size: 280,
-              color: primaryColor.withOpacity(0.06),
+              size: 300,
+              color: isDark 
+                  ? Colors.white.withOpacity(0.03) 
+                  : primaryColor.withOpacity(0.07),
             ),
           ),
           child,

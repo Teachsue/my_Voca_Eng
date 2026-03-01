@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:intl/intl.dart';
 import 'word_model.dart';
+import 'theme_manager.dart';
 
 class LevelTestPage extends StatefulWidget {
   const LevelTestPage({super.key});
@@ -12,34 +13,23 @@ class LevelTestPage extends StatefulWidget {
 }
 
 class _LevelTestPageState extends State<LevelTestPage> {
-  List<Map<String, dynamic>> _testData = [];
   int _currentIndex = 0;
   int _score = 0;
   Map<String, int> _levelScores = {'500': 0, '700': 0, '900+': 0};
+  List<Map<String, dynamic>> _testData = [];
   bool _isChecked = false;
   String? _userSelectedAnswer;
-  bool _isCorrect = false;
-  final String _cacheKey = "level_test_progress";
+  final String _cacheKey = 'level_test_progress';
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _checkProgressAndInitialize();
-    });
-  }
-
-  void _checkProgressAndInitialize() {
     final cacheBox = Hive.box('cache');
     final savedData = cacheBox.get(_cacheKey);
     if (savedData != null) {
-      int savedIndex = savedData['index'] ?? 0;
-      if (savedIndex > 0) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
         _showResumeDialog(savedData);
-      } else {
-        _clearProgress();
-        _generateLevelTestData();
-      }
+      });
     } else {
       _generateLevelTestData();
     }
@@ -47,75 +37,85 @@ class _LevelTestPageState extends State<LevelTestPage> {
 
   void _showResumeDialog(dynamic savedData) {
     final primaryColor = Theme.of(context).colorScheme.primary;
+    final isDark = ThemeManager.isDarkMode;
     showDialog(
       context: context,
-      barrierDismissible: true, // 빈 공간 클릭 허용
-      builder: (context) => AlertDialog(
-        backgroundColor: Colors.white,
-        surfaceTintColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-        contentPadding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(color: Colors.amber.withOpacity(0.1), shape: BoxShape.circle),
-              child: const Icon(Icons.history_rounded, color: Colors.amber, size: 40),
-            ),
-            const SizedBox(height: 24),
-            const Text("테스트 이어 풀기", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Colors.black87)),
-            const SizedBox(height: 12),
-            const Text(
-              "진행 중이던 기록이 있습니다.\n이어서 푸시겠습니까?",
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey, fontSize: 15, height: 1.5),
-            ),
-            const SizedBox(height: 32),
-            Row(
-              children: [
-                Expanded(
-                  child: TextButton(
-                    onPressed: () {
-                      _clearProgress();
-                      Navigator.pop(context);
-                      _generateLevelTestData();
-                    },
-                    style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                    ),
-                    child: Text("새로 풀기", style: TextStyle(color: Colors.grey[500], fontSize: 16, fontWeight: FontWeight.w600)),
-                  ),
+      barrierDismissible: false,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: isDark ? const Color(0xFF1F2937) : Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+          contentPadding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.amber.withOpacity(0.1),
+                  shape: BoxShape.circle,
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.pop(context);
-                      _restoreFromCache(savedData);
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: primaryColor,
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                    ),
-                    child: const Text("이어서 풀기", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                  ),
+                child: const Icon(Icons.history_rounded, color: Colors.amber, size: 40),
+              ),
+              const SizedBox(height: 24),
+              Text(
+                "테스트 이어 풀기",
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 20,
+                  color: ThemeManager.textColor,
                 ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    ).then((value) {
-      // 팝업이 닫혔을 때 (이어풀기/새로풀기 선택 안 함) 메인으로 이동
-      if (_testData.isEmpty && _currentIndex == 0) {
-        Navigator.pop(context);
-      }
-    });
+              ),
+              const SizedBox(height: 12),
+              Text(
+                "진행 중이던 기록이 있습니다.\n이어서 푸시겠습니까?",
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: ThemeManager.subTextColor,
+                  fontSize: 15,
+                  height: 1.5,
+                ),
+              ),
+              const SizedBox(height: 32),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextButton(
+                      onPressed: () {
+                        _clearProgress();
+                        Navigator.pop(context);
+                        _generateLevelTestData();
+                      },
+                      child: Text(
+                        "새로 풀기",
+                        style: TextStyle(color: Colors.grey[500], fontSize: 16, fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        _restoreFromCache(savedData);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: primaryColor,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      ),
+                      child: const Text("이어서 풀기", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   void _restoreFromCache(dynamic savedData) {
@@ -150,9 +150,8 @@ class _LevelTestPageState extends State<LevelTestPage> {
         correctAnswer = word.meaning;
         List<Word> distractors = allWords.where((w) => w.meaning != correctAnswer).toList();
         distractors.shuffle();
-        List<Word> selectedDistractors = distractors.take(3).toList();
         answerToInfo[correctAnswer] = word.spelling;
-        for (var d in selectedDistractors) {
+        for (var d in distractors.take(3)) {
           answerToInfo[d.meaning] = d.spelling;
         }
       } else {
@@ -160,9 +159,8 @@ class _LevelTestPageState extends State<LevelTestPage> {
         correctAnswer = word.spelling;
         List<Word> distractors = allWords.where((w) => w.spelling != correctAnswer).toList();
         distractors.shuffle();
-        List<Word> selectedDistractors = distractors.take(3).toList();
         answerToInfo[correctAnswer] = word.meaning;
-        for (var d in selectedDistractors) {
+        for (var d in distractors.take(3)) {
           answerToInfo[d.spelling] = d.meaning;
         }
       }
@@ -174,7 +172,7 @@ class _LevelTestPageState extends State<LevelTestPage> {
         'options': options,
         'answerToInfo': answerToInfo,
         'level': word.level,
-        'isSpellingToMeaning': isSpellingToMeaning,
+        'isSpellingToMeaning': isSpellingToMeaning
       });
     }
     _saveProgress();
@@ -187,13 +185,11 @@ class _LevelTestPageState extends State<LevelTestPage> {
     bool correct = (selectedAnswer == currentQuestion['correctAnswer']);
     if (correct) {
       _score++;
-      String level = currentQuestion['level'];
-      _levelScores[level] = (_levelScores[level] ?? 0) + 1;
+      _levelScores[currentQuestion['level']] = (_levelScores[currentQuestion['level']] ?? 0) + 1;
     }
     setState(() {
       _isChecked = true;
       _userSelectedAnswer = selectedAnswer;
-      _isCorrect = correct;
     });
     _saveProgress();
   }
@@ -213,8 +209,7 @@ class _LevelTestPageState extends State<LevelTestPage> {
   }
 
   void _saveProgress() {
-    final cacheBox = Hive.box('cache');
-    cacheBox.put(_cacheKey, {
+    Hive.box('cache').put(_cacheKey, {
       'index': _currentIndex,
       'score': _score,
       'levelScores': _levelScores,
@@ -228,6 +223,7 @@ class _LevelTestPageState extends State<LevelTestPage> {
 
   void _showResultDialog() {
     final primaryColor = Theme.of(context).colorScheme.primary;
+    final isDark = ThemeManager.isDarkMode;
     String recommendedLevel = '500';
     if (_levelScores['900+']! >= 3 && _levelScores['700']! >= 4 && _levelScores['500']! >= 4) {
       recommendedLevel = '900+';
@@ -243,70 +239,84 @@ class _LevelTestPageState extends State<LevelTestPage> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        backgroundColor: Colors.white,
-        surfaceTintColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-        contentPadding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(color: primaryColor.withOpacity(0.1), shape: BoxShape.circle),
-              child: Icon(Icons.bar_chart_rounded, color: primaryColor, size: 40),
-            ),
-            const SizedBox(height: 24),
-            const Text("테스트 결과 📊", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22, color: Colors.black87)),
-            const SizedBox(height: 16),
-            Text("총 점수: $_score / ${_testData.length}", style: const TextStyle(fontSize: 18, color: Colors.black54, fontWeight: FontWeight.w600)),
-            const SizedBox(height: 24),
-            const Text("사용자님께 추천하는 레벨은", textAlign: TextAlign.center, style: TextStyle(color: Colors.grey, fontSize: 15)),
-            const SizedBox(height: 8),
-            Text("TOEIC $recommendedLevel", style: TextStyle(fontSize: 32, fontWeight: FontWeight.w900, color: primaryColor)),
-            const Text("입니다!", style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.black87)),
-            const SizedBox(height: 32),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  Navigator.pop(context);
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: primaryColor,
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                ),
-                child: const Text("확인", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: isDark ? const Color(0xFF1F2937) : Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+          contentPadding: const EdgeInsets.all(32),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(color: primaryColor.withOpacity(0.1), shape: BoxShape.circle),
+                child: Icon(Icons.bar_chart_rounded, color: primaryColor, size: 40),
               ),
-            ),
-          ],
-        ),
-      ),
+              const SizedBox(height: 24),
+              Text(
+                "테스트 결과 📊",
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22, color: ThemeManager.textColor),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                "총 점수: $_score / ${_testData.length}",
+                style: TextStyle(fontSize: 18, color: ThemeManager.subTextColor, fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 32),
+              Text(
+                "추천 레벨",
+                style: TextStyle(color: ThemeManager.subTextColor, fontSize: 14, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                "TOEIC $recommendedLevel",
+                style: TextStyle(fontSize: 32, fontWeight: FontWeight.w900, color: primaryColor),
+              ),
+              const SizedBox(height: 32),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                    Navigator.of(this.context).pop();
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: primaryColor,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  ),
+                  child: const Text("확인", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
   @override
   Widget build(BuildContext context) {
     final primaryColor = Theme.of(context).colorScheme.primary;
-    if (_testData.isEmpty) return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    final currentQuestion = _testData[_currentIndex];
-    final options = currentQuestion['options'] as List<String>;
-    final Map<dynamic, dynamic> rawMap = currentQuestion['answerToInfo'] ?? {};
-    final Map<String, String> answerToInfo = rawMap.map((k, v) => MapEntry(k.toString(), v.toString()));
-    final bool isSpellingToMeaning = currentQuestion['isSpellingToMeaning'] ?? true;
+    final isDark = ThemeManager.isDarkMode;
+    if (_testData.isEmpty) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+    final current = _testData[_currentIndex];
+    final options = current['options'] as List<String>;
+    final answerToInfo = Map<String, String>.from(current['answerToInfo']);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: isDark ? const Color(0xFF020617) : const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: Text("실력 진단 테스트 (${_currentIndex + 1}/${_testData.length})", style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
+        title: Text(
+          "실력 진단 테스트 (${_currentIndex + 1}/${_testData.length})",
+          style: const TextStyle(fontWeight: FontWeight.w900),
+        ),
+        backgroundColor: Colors.transparent,
         elevation: 0,
-        centerTitle: true,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
           onPressed: () {
@@ -319,93 +329,99 @@ class _LevelTestPageState extends State<LevelTestPage> {
         child: Padding(
           padding: const EdgeInsets.all(20),
           child: SizedBox(
-            height: 55,
+            height: 60,
             child: ElevatedButton(
               onPressed: _isChecked ? _nextQuestion : null,
               style: ElevatedButton.styleFrom(
-                backgroundColor: _isChecked ? primaryColor : Colors.grey[300],
+                backgroundColor: _isChecked ? primaryColor : (isDark ? Colors.white10 : Colors.grey[300]),
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
                 elevation: 0,
               ),
               child: Text(
                 _currentIndex < _testData.length - 1 ? "다음 문제" : "결과 확인",
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900),
               ),
             ),
           ),
         ),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(24),
         child: Column(
           children: [
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
+              padding: const EdgeInsets.symmetric(vertical: 48, horizontal: 24),
               decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(25),
-                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 15, offset: const Offset(0, 5))],
+                color: isDark ? Colors.white.withOpacity(0.05) : Colors.white,
+                borderRadius: BorderRadius.circular(32),
+                boxShadow: isDark ? [] : [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 15)],
               ),
               child: Column(
                 children: [
-                  Text(isSpellingToMeaning ? "뜻을 선택하세요" : "단어를 선택하세요", style: TextStyle(color: Colors.grey[500], fontSize: 15, fontWeight: FontWeight.w500)),
+                  Text(
+                    current['isSpellingToMeaning'] ? "뜻을 선택하세요" : "단어를 선택하세요",
+                    style: TextStyle(color: ThemeManager.subTextColor, fontSize: 14, fontWeight: FontWeight.w600),
+                  ),
                   const SizedBox(height: 20),
                   Text(
-                    currentQuestion['question'],
+                    current['question'],
                     textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: isSpellingToMeaning ? 36 : 28, fontWeight: FontWeight.bold, color: primaryColor, letterSpacing: -0.5),
+                    style: TextStyle(fontSize: current['isSpellingToMeaning'] ? 32 : 26, fontWeight: FontWeight.w900, color: ThemeManager.textColor),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 30),
+            const SizedBox(height: 32),
             ...options.map((option) {
-              bool isCorrectOption = option == currentQuestion['correctAnswer'];
+              bool isCorrectOption = option == current['correctAnswer'];
               bool isSelected = option == _userSelectedAnswer;
-              Color btnColor = Colors.white;
-              Color borderCol = Colors.grey[200]!;
-              Color textColor = Colors.black87;
+              Color btnColor = isDark ? Colors.white.withOpacity(0.05) : Colors.white;
+              Color borderColor = isDark ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.03);
+              Color textColor = ThemeManager.textColor;
               if (_isChecked) {
                 if (isCorrectOption) {
-                  btnColor = Colors.green[50]!;
-                  borderCol = Colors.green;
-                  textColor = Colors.green[900]!;
+                  btnColor = Colors.green[400]!.withOpacity(0.15);
+                  borderColor = Colors.green[400]!;
+                  textColor = isDark ? Colors.green[300]! : Colors.green[700]!;
                 } else if (isSelected) {
-                  btnColor = Colors.red[50]!;
-                  borderCol = Colors.red;
-                  textColor = Colors.red[900]!;
+                  btnColor = Colors.red[400]!.withOpacity(0.15);
+                  borderColor = Colors.red[400]!;
+                  textColor = isDark ? Colors.red[300]! : Colors.red[700]!;
                 } else {
-                  textColor = Colors.grey[400]!;
+                  textColor = ThemeManager.subTextColor.withOpacity(0.5);
                 }
               }
               return Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: SizedBox(
+                padding: const EdgeInsets.only(bottom: 14),
+                child: Container(
                   width: double.infinity,
-                  height: 80,
+                  constraints: const BoxConstraints(minHeight: 75),
                   child: OutlinedButton(
                     onPressed: () => _checkAnswer(option),
                     style: OutlinedButton.styleFrom(
                       backgroundColor: btnColor,
-                      side: BorderSide(color: borderCol, width: 2),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                      side: BorderSide(color: borderColor, width: 2),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
                     ),
                     child: Text(
                       _isChecked ? "$option\n(${answerToInfo[option]})" : option,
                       textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 16, fontWeight: isCorrectOption && _isChecked ? FontWeight.bold : FontWeight.w500, color: textColor),
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: isCorrectOption && _isChecked ? FontWeight.w900 : FontWeight.w700,
+                        color: textColor,
+                      ),
                     ),
                   ),
                 ),
               );
-            }).toList(),
+            }),
           ],
         ),
       ),
     );
   }
 }
-

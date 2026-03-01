@@ -4,6 +4,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'word_model.dart';
 import 'quiz_page.dart';
 import 'seasonal_background.dart';
+import 'theme_manager.dart';
 
 class StudyPage extends StatefulWidget {
   final String category;
@@ -57,17 +58,20 @@ class _StudyPageState extends State<StudyPage> {
   @override
   Widget build(BuildContext context) {
     final primaryColor = Theme.of(context).colorScheme.primary;
+    final textColor = ThemeManager.textColor;
+    final subTextColor = ThemeManager.subTextColor;
+    final isDark = ThemeManager.isDarkMode;
 
     return SeasonalBackground(
       child: Scaffold(
         backgroundColor: Colors.transparent,
         appBar: AppBar(
-          title: Text("${widget.category} ${widget.level} - DAY ${_currentDayIndex + 1}", style: const TextStyle(fontWeight: FontWeight.w900)),
+          title: Text("${widget.category} ${widget.level} - DAY ${_currentDayIndex + 1}", style: TextStyle(fontWeight: FontWeight.w900, color: textColor)),
           backgroundColor: Colors.transparent,
           elevation: 0,
-          leading: IconButton(icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20), onPressed: () => Navigator.pop(context)),
+          leading: IconButton(icon: Icon(Icons.arrow_back_ios_new_rounded, size: 20, color: textColor), onPressed: () => Navigator.pop(context)),
           actions: [
-            IconButton(icon: const Icon(Icons.home_rounded), onPressed: () => Navigator.popUntil(context, (route) => route.isFirst)),
+            IconButton(icon: Icon(Icons.home_rounded, color: textColor), onPressed: () => Navigator.popUntil(context, (route) => route.isFirst)),
             const SizedBox(width: 8),
           ],
         ),
@@ -86,7 +90,7 @@ class _StudyPageState extends State<StudyPage> {
               children: [
                 Expanded(
                   child: dayWords.isEmpty
-                      ? const Center(child: Text("등록된 단어가 없습니다."))
+                      ? Center(child: Text("등록된 단어가 없습니다.", style: TextStyle(color: subTextColor)))
                       : ListView.separated(
                           key: ValueKey("list_$dayIndex"),
                           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
@@ -99,32 +103,31 @@ class _StudyPageState extends State<StudyPage> {
                                 return Container(
                                   padding: const EdgeInsets.all(18),
                                   decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.85),
+                                    color: isDark ? Colors.white.withOpacity(0.08) : Colors.white.withOpacity(0.85),
                                     borderRadius: BorderRadius.circular(20),
-                                    boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 8)],
                                   ),
                                   child: Row(
                                     children: [
                                       Container(
                                         width: 32, height: 32,
                                         alignment: Alignment.center,
-                                        decoration: BoxDecoration(color: primaryColor.withOpacity(0.1), shape: BoxShape.circle),
-                                        child: Text("${index + 1}", style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold, fontSize: 13)),
+                                        decoration: BoxDecoration(color: primaryColor.withOpacity(0.15), shape: BoxShape.circle),
+                                        child: Text("${index + 1}", style: TextStyle(color: isDark ? primaryColor.withOpacity(0.8) : primaryColor, fontWeight: FontWeight.bold, fontSize: 13)),
                                       ),
                                       const SizedBox(width: 16),
                                       Expanded(
                                         child: Column(
                                           crossAxisAlignment: CrossAxisAlignment.start,
                                           children: [
-                                            Text(word.spelling, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Color(0xFF1E293B))),
+                                            Text(word.spelling, style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: textColor)),
                                             const SizedBox(height: 2),
-                                            Text(word.meaning, style: TextStyle(fontSize: 14, color: Colors.grey[600], fontWeight: FontWeight.w500)),
+                                            Text(word.meaning, style: TextStyle(fontSize: 14, color: subTextColor, fontWeight: FontWeight.w500)),
                                           ],
                                         ),
                                       ),
                                       IconButton(
                                         onPressed: () { setStateItem(() { word.isScrap = !word.isScrap; word.save(); }); },
-                                        icon: Icon(word.isScrap ? Icons.star_rounded : Icons.star_border_rounded, color: word.isScrap ? Colors.amber : Colors.grey[300], size: 28),
+                                        icon: Icon(word.isScrap ? Icons.star_rounded : Icons.star_border_rounded, color: word.isScrap ? Colors.amber : (isDark ? Colors.white24 : Colors.grey[300]), size: 28),
                                       ),
                                     ],
                                   ),
@@ -136,7 +139,10 @@ class _StudyPageState extends State<StudyPage> {
                 ),
                 Container(
                   padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(color: Colors.white.withOpacity(0.9), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, -5))]),
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF1F2937) : Colors.white.withOpacity(0.9),
+                    boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, -5))]
+                  ),
                   child: SizedBox(
                     width: double.infinity, height: 60,
                     child: ElevatedButton.icon(
@@ -145,7 +151,12 @@ class _StudyPageState extends State<StudyPage> {
                       },
                       icon: const Icon(Icons.edit_document, size: 22),
                       label: Text("DAY $dayNumber 퀴즈 풀기", style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
-                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1E293B), foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)), elevation: 0),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: isDark ? primaryColor : const Color(0xFF1E293B), 
+                        foregroundColor: Colors.white, 
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)), 
+                        elevation: 0
+                      ),
                     ),
                   ),
                 ),

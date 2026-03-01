@@ -3,6 +3,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'word_model.dart';
 import 'quiz_page.dart';
 import 'seasonal_background.dart';
+import 'theme_manager.dart';
 
 class WrongAnswerPage extends StatefulWidget {
   const WrongAnswerPage({super.key});
@@ -28,11 +29,12 @@ class _WrongAnswerPageState extends State<WrongAnswerPage> {
   void _showDeleteAllDialog() {
     if (_wrongBox.isEmpty) return;
     final primaryColor = Theme.of(context).colorScheme.primary;
+    final isDark = ThemeManager.isDarkMode;
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: Colors.white,
+        backgroundColor: isDark ? const Color(0xFF1F2937) : Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
         contentPadding: const EdgeInsets.all(32),
         content: Column(
@@ -44,9 +46,9 @@ class _WrongAnswerPageState extends State<WrongAnswerPage> {
               child: const Icon(Icons.delete_sweep_rounded, color: Colors.redAccent, size: 40),
             ),
             const SizedBox(height: 24),
-            const Text("오답노트 비우기", style: TextStyle(fontWeight: FontWeight.w900, fontSize: 20)),
+            Text("오답노트 비우기", style: TextStyle(fontWeight: FontWeight.w900, fontSize: 20, color: ThemeManager.textColor)),
             const SizedBox(height: 12),
-            const Text("저장된 모든 오답을 삭제할까요?\n삭제된 데이터는 복구할 수 없습니다.", textAlign: TextAlign.center, style: TextStyle(color: Colors.grey, fontSize: 14, height: 1.5)),
+            Text("저장된 모든 오답을 삭제할까요?\n삭제된 데이터는 복구할 수 없습니다.", textAlign: TextAlign.center, style: TextStyle(color: ThemeManager.subTextColor, fontSize: 14, height: 1.5)),
             const SizedBox(height: 32),
             Row(
               children: [
@@ -78,17 +80,18 @@ class _WrongAnswerPageState extends State<WrongAnswerPage> {
   @override
   Widget build(BuildContext context) {
     final wrongWords = _wrongBox.values.toList().reversed.toList();
-    final primaryColor = Theme.of(context).colorScheme.primary;
+    final textColor = ThemeManager.textColor;
+    final isDark = ThemeManager.isDarkMode;
 
     return SeasonalBackground(
       child: Scaffold(
         backgroundColor: Colors.transparent,
         appBar: AppBar(
-          title: const Text("오답노트 📝", style: TextStyle(fontWeight: FontWeight.w900)),
+          title: Text("오답노트 📝", style: TextStyle(fontWeight: FontWeight.w900, color: textColor)),
           backgroundColor: Colors.transparent,
           elevation: 0,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
+            icon: Icon(Icons.arrow_back_ios_new_rounded, size: 20, color: textColor),
             onPressed: () => Navigator.pop(context),
           ),
           actions: [
@@ -102,7 +105,7 @@ class _WrongAnswerPageState extends State<WrongAnswerPage> {
                 onPressed: () {
                   Navigator.push(context, MaterialPageRoute(builder: (context) => QuizPage(dayWords: wrongWords, isWrongAnswerQuiz: true)));
                 },
-                backgroundColor: const Color(0xFF1E293B),
+                backgroundColor: isDark ? Theme.of(context).colorScheme.primary : const Color(0xFF1E293B),
                 icon: const Icon(Icons.play_arrow_rounded, color: Colors.white),
                 label: const Text("오답 퀴즈", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
               )
@@ -118,7 +121,7 @@ class _WrongAnswerPageState extends State<WrongAnswerPage> {
                       child: Icon(Icons.check_circle_rounded, size: 60, color: Colors.green[300]),
                     ),
                     const SizedBox(height: 24),
-                    const Text("틀린 문제가 없어요!\n완벽합니다! 👍", textAlign: TextAlign.center, style: TextStyle(fontSize: 17, color: Colors.black54, fontWeight: FontWeight.bold, height: 1.5)),
+                    Text("틀린 문제가 없어요!\n완벽합니다! 👍", textAlign: TextAlign.center, style: TextStyle(fontSize: 17, color: ThemeManager.subTextColor, fontWeight: FontWeight.bold, height: 1.5)),
                   ],
                 ),
               )
@@ -133,9 +136,8 @@ class _WrongAnswerPageState extends State<WrongAnswerPage> {
                   return Container(
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.85),
+                      color: isDark ? Colors.white.withOpacity(0.08) : Colors.white.withOpacity(0.85),
                       borderRadius: BorderRadius.circular(20),
-                      boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 8)],
                     ),
                     child: Row(
                       children: [
@@ -145,22 +147,22 @@ class _WrongAnswerPageState extends State<WrongAnswerPage> {
                             children: [
                               Row(
                                 children: [
-                                  Text(word.spelling, style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w900, color: Color(0xFF1E293B))),
+                                  Text(word.spelling, style: TextStyle(fontSize: 19, fontWeight: FontWeight.w900, color: textColor)),
                                   const SizedBox(width: 10),
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                    decoration: BoxDecoration(color: levelColor.withOpacity(0.1), borderRadius: BorderRadius.circular(6)),
-                                    child: Text(word.level, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: levelColor)),
+                                    decoration: BoxDecoration(color: levelColor.withOpacity(0.15), borderRadius: BorderRadius.circular(6)),
+                                    child: Text(word.level, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: isDark ? levelColor.withOpacity(0.8) : levelColor)),
                                   ),
                                 ],
                               ),
                               const SizedBox(height: 4),
-                              Text(word.meaning, style: TextStyle(fontSize: 15, color: Colors.grey[600], fontWeight: FontWeight.w500)),
+                              Text(word.meaning, style: TextStyle(fontSize: 15, color: ThemeManager.subTextColor, fontWeight: FontWeight.w500)),
                             ],
                           ),
                         ),
                         IconButton(
-                          icon: Icon(Icons.close_rounded, color: Colors.grey[300], size: 20),
+                          icon: Icon(Icons.close_rounded, color: isDark ? Colors.white24 : Colors.grey[300], size: 20),
                           onPressed: () => _deleteWord(word.spelling),
                         ),
                       ],

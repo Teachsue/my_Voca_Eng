@@ -72,13 +72,14 @@ class _DaySelectionPageState extends State<DaySelectionPage> {
 
   void _showResumeDialog(dynamic savedData) {
     final primaryColor = Theme.of(context).colorScheme.primary;
+    final isDark = ThemeManager.isDarkMode;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: Colors.white,
+        backgroundColor: isDark ? const Color(0xFF1F2937) : Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-        title: const Text("퀴즈 이어 풀기", style: TextStyle(fontWeight: FontWeight.bold)),
-        content: const Text("이전에 풀던 기록이 있습니다. 이어서 푸시겠습니까?"),
+        title: Text("퀴즈 이어 풀기", style: TextStyle(fontWeight: FontWeight.bold, color: ThemeManager.textColor)),
+        content: Text("이전에 풀던 기록이 있습니다. 이어서 푸시겠습니까?", style: TextStyle(color: ThemeManager.subTextColor)),
         actions: [
           TextButton(
             onPressed: () {
@@ -112,17 +113,18 @@ class _DaySelectionPageState extends State<DaySelectionPage> {
 
   @override
   Widget build(BuildContext context) {
-    final primaryColor = Theme.of(context).colorScheme.primary;
+    final textColor = ThemeManager.textColor;
+    final isDark = ThemeManager.isDarkMode;
 
     return SeasonalBackground(
       child: Scaffold(
         backgroundColor: Colors.transparent,
         appBar: AppBar(
-          title: Text("${widget.category} ${widget.level}", style: const TextStyle(fontWeight: FontWeight.w900)),
+          title: Text("${widget.category} ${widget.level}", style: TextStyle(fontWeight: FontWeight.w900, color: textColor)),
           backgroundColor: Colors.transparent,
           elevation: 0,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
+            icon: Icon(Icons.arrow_back_ios_new_rounded, size: 20, color: textColor),
             onPressed: () => Navigator.pop(context),
           ),
         ),
@@ -132,11 +134,11 @@ class _DaySelectionPageState extends State<DaySelectionPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildContinueBanner(context),
-                  const Padding(
-                    padding: EdgeInsets.fromLTRB(24, 20, 24, 12),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 20, 24, 12),
                     child: Text(
                       "학습 리스트",
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Color(0xFF1E293B)),
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: textColor),
                     ),
                   ),
                   Expanded(
@@ -189,7 +191,7 @@ class _DaySelectionPageState extends State<DaySelectionPage> {
             gradient: LinearGradient(colors: bannerGradient, begin: Alignment.topLeft, end: Alignment.bottomRight),
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
-              BoxShadow(color: bannerGradient[0].withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 5)),
+              BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 5)),
             ],
           ),
           child: Row(
@@ -224,6 +226,7 @@ class _DaySelectionPageState extends State<DaySelectionPage> {
     final cacheBox = Hive.box('cache');
     final int lastDay = cacheBox.get('last_studied_day_${widget.category}_${widget.level}', defaultValue: 1);
     final bool isCurrent = lastDay == dayNumber;
+    final isDark = ThemeManager.isDarkMode;
 
     return GestureDetector(
       onTap: () {
@@ -241,12 +244,9 @@ class _DaySelectionPageState extends State<DaySelectionPage> {
       },
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.85),
+          color: isDark ? Colors.white.withOpacity(0.08) : Colors.white.withOpacity(0.85),
           borderRadius: BorderRadius.circular(16),
           border: isCurrent ? Border.all(color: primaryColor.withOpacity(0.5), width: 2) : null,
-          boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 6),
-          ],
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -256,7 +256,7 @@ class _DaySelectionPageState extends State<DaySelectionPage> {
               style: TextStyle(
                 fontSize: 24, 
                 fontWeight: FontWeight.w900, 
-                color: isCurrent ? primaryColor : const Color(0xFF1E293B),
+                color: isCurrent ? (isDark ? primaryColor : primaryColor) : ThemeManager.textColor,
               ),
             ),
             Text(
@@ -264,7 +264,7 @@ class _DaySelectionPageState extends State<DaySelectionPage> {
               style: TextStyle(
                 fontSize: 10, 
                 fontWeight: FontWeight.bold, 
-                color: isCurrent ? primaryColor.withOpacity(0.7) : Colors.grey[500],
+                color: isCurrent ? primaryColor.withOpacity(0.7) : ThemeManager.subTextColor,
               ),
             ),
           ],
@@ -275,11 +275,12 @@ class _DaySelectionPageState extends State<DaySelectionPage> {
 
   Widget _buildTotalQuizCard(BuildContext context) {
     final primaryColor = Theme.of(context).colorScheme.primary;
+    final isDark = ThemeManager.isDarkMode;
     return GestureDetector(
       onTap: _checkSavedQuizAndStart,
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.6),
+          color: isDark ? Colors.white.withOpacity(0.05) : primaryColor.withOpacity(0.08),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: primaryColor.withOpacity(0.2)),
         ),
