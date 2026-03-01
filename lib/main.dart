@@ -92,66 +92,84 @@ class _HomePageState extends State<HomePage> {
       barrierDismissible: true,
       builder: (BuildContext dialogContext) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(25),
-          ),
-          title: const Column(
-            children: [
-              Icon(Icons.psychology_alt_rounded, color: Colors.indigo, size: 50),
-              SizedBox(height: 15),
-              Text("실력 진단 테스트 안내", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
-            ],
-          ),
-          content: const Column(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+          contentPadding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
+          content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text("내 실력에 딱 맞는 단어장을 추천해 드릴게요!", textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold, color: Colors.indigo)),
-              SizedBox(height: 20),
-              Row(children: [Icon(Icons.check_circle_outline, size: 18, color: Colors.grey), SizedBox(width: 10), Expanded(child: Text("총 15개 문항 (레벨별 5문제)"))]),
-              SizedBox(height: 8),
-              Row(children: [Icon(Icons.timer_outlined, size: 18, color: Colors.grey), SizedBox(width: 10), Expanded(child: Text("예상 소요 시간: 약 3분"))]),
-              SizedBox(height: 8),
-              Row(children: [Icon(Icons.auto_awesome_rounded, size: 18, color: Colors.grey), SizedBox(width: 10), Expanded(child: Text("분석 결과에 따른 맞춤 레벨 배정"))]),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(color: Colors.indigo.withOpacity(0.1), shape: BoxShape.circle),
+                child: const Icon(Icons.psychology_alt_rounded, color: Colors.indigo, size: 40),
+              ),
+              const SizedBox(height: 24),
+              const Text("실력 진단 테스트", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22, color: Colors.black87)),
+              const SizedBox(height: 20),
+              _buildCriteriaItem(Icons.format_list_numbered_rounded, "총 15개 문항 구성", "레벨별(500/700/900) 5문제씩 출제"),
+              _buildCriteriaItem(Icons.auto_graph_rounded, "맞춤 레벨 추천", "정답률 분석을 통한 최적의 난이도 배정"),
+              _buildCriteriaItem(Icons.timer_outlined, "약 3분 소요", "빠르고 정확하게 실력을 확인하세요"),
+              const SizedBox(height: 32),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextButton(
+                      onPressed: () => Navigator.pop(dialogContext),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      ),
+                      child: Text("다음에 할게요", style: TextStyle(color: Colors.grey[500], fontSize: 16, fontWeight: FontWeight.w600)),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        Navigator.pop(dialogContext);
+                        await Navigator.push(context, MaterialPageRoute(builder: (context) => const LevelTestPage()));
+                        _refresh();
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.indigo,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      ),
+                      child: const Text("시작하기", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                ],
+              ),
             ],
           ),
-          actionsPadding: const EdgeInsets.fromLTRB(20, 0, 20, 25),
-          actions: [
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => Navigator.pop(dialogContext),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 15),
-                      side: BorderSide(color: Colors.grey.shade300),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    child: const Text("다음에 할게요", style: TextStyle(color: Colors.grey)),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () async {
-                      Navigator.pop(dialogContext);
-                      await Navigator.push(context, MaterialPageRoute(builder: (context) => const LevelTestPage()));
-                      _refresh();
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.indigo,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 15),
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    child: const Text("시험 시작하기!", style: TextStyle(fontWeight: FontWeight.bold)),
-                  ),
-                ),
-              ],
-            ),
-          ],
         );
       },
+    );
+  }
+
+  Widget _buildCriteriaItem(IconData icon, String title, String desc) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 20, color: Colors.indigo[300]),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.black87)),
+                const SizedBox(height: 2),
+                Text(desc, style: TextStyle(fontSize: 13, color: Colors.grey[500])),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 

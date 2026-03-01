@@ -85,28 +85,65 @@ class _QuizPageState extends State<QuizPage> {
     showDialog<bool>(
       context: context,
       barrierDismissible: true,
-      builder: (dialogContext) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text("퀴즈 이어 풀기", style: TextStyle(fontWeight: FontWeight.bold)),
-        content: const Text("이전에 풀던 기록이 있습니다.\n이어서 푸시겠습니까?"),
-        actions: [
-          TextButton(
-            onPressed: () {
-              _clearProgress();
-              Navigator.pop(dialogContext, true);
-              _initializeQuiz();
-            },
-            child: const Text("새로 풀기", style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(dialogContext, true);
-              _restoreFromCache(savedData);
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.indigo, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
-            child: const Text("이어서 풀기", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-          ),
-        ],
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+        contentPadding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(color: Colors.amber.withOpacity(0.1), shape: BoxShape.circle),
+              child: const Icon(Icons.history_rounded, color: Colors.amber, size: 40),
+            ),
+            const SizedBox(height: 24),
+            const Text("퀴즈 이어 풀기", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Colors.black87)),
+            const SizedBox(height: 12),
+            const Text(
+              "이전에 풀던 기록이 있습니다.\n이어서 푸시겠습니까?",
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey, fontSize: 15, height: 1.5),
+            ),
+            const SizedBox(height: 32),
+            Row(
+              children: [
+                Expanded(
+                  child: TextButton(
+                    onPressed: () {
+                      _clearProgress();
+                      Navigator.pop(context, true);
+                      _initializeQuiz();
+                    },
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    ),
+                    child: Text("새로 풀기", style: TextStyle(color: Colors.grey[500], fontSize: 16, fontWeight: FontWeight.w600)),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.pop(context, true);
+                      _restoreFromCache(savedData);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.indigo,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    ),
+                    child: const Text("이어서 풀기", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     ).then((handled) {
       if (handled == null) Navigator.pop(context);
@@ -118,18 +155,46 @@ class _QuizPageState extends State<QuizPage> {
       context: context,
       barrierDismissible: true,
       builder: (BuildContext dialogContext) {
-        return SimpleDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: const Text("문제 수 선택", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-          children: [10, 20, 30].map((count) {
-            return SimpleDialogOption(
-              onPressed: () {
-                Navigator.pop(dialogContext, true);
-                _loadNewQuizData(count);
-              },
-              child: Padding(padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 8.0), child: Text("$count문제", style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500))),
-            );
-          }).toList(),
+        return AlertDialog(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+          contentPadding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(color: Colors.indigo.withOpacity(0.1), shape: BoxShape.circle),
+                child: const Icon(Icons.format_list_numbered_rounded, color: Colors.indigo, size: 40),
+              ),
+              const SizedBox(height: 24),
+              const Text("문제 수 선택", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Colors.black87)),
+              const SizedBox(height: 12),
+              const Text("풀고 싶은 문제의 개수를 선택해 주세요.", textAlign: TextAlign.center, style: TextStyle(color: Colors.grey, fontSize: 15)),
+              const SizedBox(height: 24),
+              ...[10, 20, 30].map((count) {
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton(
+                      onPressed: () {
+                        Navigator.pop(dialogContext, true);
+                        _loadNewQuizData(count);
+                      },
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        side: BorderSide(color: Colors.indigo.withOpacity(0.2)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      ),
+                      child: Text("$count문제", style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.indigo)),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ],
+          ),
         );
       },
     ).then((handled) {
@@ -297,7 +362,7 @@ class _QuizPageState extends State<QuizPage> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
-      appBar: AppBar(title: Text(appBarTitle, style: const TextStyle(fontSize: 16)), backgroundColor: Colors.white, foregroundColor: Colors.black, elevation: 0, leading: IconButton(icon: const Icon(Icons.arrow_back_ios_new), onPressed: () { _saveProgress(); Navigator.pop(context); })),
+      appBar: AppBar(title: Text(appBarTitle, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)), backgroundColor: Colors.white, foregroundColor: Colors.black, elevation: 0, leading: IconButton(icon: const Icon(Icons.arrow_back_ios_new, size: 20), onPressed: () { _saveProgress(); Navigator.pop(context); })),
       bottomNavigationBar: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
@@ -307,10 +372,11 @@ class _QuizPageState extends State<QuizPage> {
               onPressed: _isChecked ? _nextQuestion : null,
               style: ElevatedButton.styleFrom(
                 backgroundColor: _isChecked ? (_isCorrect ? Colors.green : Colors.indigo) : Colors.grey[300],
+                foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
                 elevation: 0,
               ),
-              child: Text(_isChecked ? (_currentIndex < _quizData.length - 1 ? "다음 문제" : "결과 보기") : "정답을 선택하세요", style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+              child: Text(_isChecked ? (_currentIndex < _quizData.length - 1 ? "다음 문제" : "결과 보기") : "정답을 선택하세요", style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             ),
           ),
         ),
@@ -323,10 +389,10 @@ class _QuizPageState extends State<QuizPage> {
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
-                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(25), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, spreadRadius: 5)]),
+                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(25), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 15, spreadRadius: 5)]),
                 child: Column(
                   children: [
-                    Text(isSpellingToMeaning ? "뜻을 선택하세요" : "단어를 선택하세요", style: TextStyle(color: Colors.grey[600], fontSize: 14)),
+                    Text(isSpellingToMeaning ? "뜻을 선택하세요" : "단어를 선택하세요", style: TextStyle(color: Colors.grey[500], fontSize: 15, fontWeight: FontWeight.w500)),
                     const SizedBox(height: 15),
                     Text(currentQuestion['question'], textAlign: TextAlign.center, style: TextStyle(fontSize: isSpellingToMeaning ? 36 : 28, fontWeight: FontWeight.bold, color: Colors.indigo)),
                   ],
@@ -344,7 +410,7 @@ class _QuizPageState extends State<QuizPage> {
                 if (_isChecked) {
                   if (isCorrectOption) { btnColor = Colors.green[50]!; borderCol = Colors.green; textColor = Colors.green[900]!; }
                   else if (isSelected) { btnColor = Colors.red[50]!; borderCol = Colors.red; textColor = Colors.red[900]!; }
-                  else { textColor = Colors.grey; }
+                  else { textColor = Colors.grey[400]!; }
                 }
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 12),
@@ -354,7 +420,7 @@ class _QuizPageState extends State<QuizPage> {
                     child: OutlinedButton(
                       onPressed: () => _checkAnswer(option),
                       style: OutlinedButton.styleFrom(backgroundColor: btnColor, side: BorderSide(color: borderCol, width: 2), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)), padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10)),
-                      child: Text(buttonText, textAlign: TextAlign.center, style: TextStyle(fontSize: 16, fontWeight: isCorrectOption && _isChecked ? FontWeight.bold : FontWeight.normal, color: textColor)),
+                      child: Text(buttonText, textAlign: TextAlign.center, style: TextStyle(fontSize: 16, fontWeight: isCorrectOption && _isChecked ? FontWeight.bold : FontWeight.w500, color: textColor)),
                     ),
                   ),
                 );
